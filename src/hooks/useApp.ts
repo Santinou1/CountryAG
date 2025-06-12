@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Ticket } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 // Credenciales hardcodeadas
 const validCredentials = [
@@ -79,8 +80,18 @@ export const useApp = () => {
   };
 
   const logout = () => {
+    // Limpiar localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('countryag-user');
+    localStorage.removeItem('countryag-tickets');
+    
+    // Limpiar estado
     setCurrentUser(null);
     setView('login');
+    setTickets([]);
+    
+    // Redirigir a login
+    window.location.href = '/login';
   };
 
   const purchaseTicket = (destination: string) => {

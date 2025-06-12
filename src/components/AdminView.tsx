@@ -21,6 +21,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'history'>('pending');
 
+  // Debug: mostrar información del usuario
+  console.log('AdminView - User data:', user);
+
   const handleUseTicket = (ticketId: string, type: 'ida' | 'vuelta') => {
     onUseTicket(ticketId, type);
   };
@@ -99,7 +102,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Panel Chofer</h1>
-            <p className="text-sm text-gray-600">Hola, {user.name}</p>
+            <p className="text-sm text-gray-600">
+              Hola, {user?.name}
+            </p>
           </div>
           <button
             onClick={onLogout}

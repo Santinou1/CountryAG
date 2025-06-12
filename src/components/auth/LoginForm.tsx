@@ -61,12 +61,12 @@ export const LoginForm = () => {
       const userToSave = {
         id: data.user.id.toString(),
         name: `${data.user.nombre} ${data.user.apellido}`,
-        role: data.user.rol.toLowerCase() === 'admin' ? 'admin' : 'client'
+        role: data.user.rol.toLowerCase()
       };
       localStorage.setItem('countryag-user', JSON.stringify(userToSave));
       
       // Redirigir según el rol del usuario
-      if (data.user.rol === 'ADMIN') {
+      if (data.user.rol.toLowerCase() === 'admin') {
         navigate('/admin');
       } else {
         navigate('/home');

@@ -1,0 +1,8 @@
+.highlight {
+  animation: highlight 2s ease-out;
+}
+
+@keyframes highlight {
+  0% { background-color: #dcfce7; }
+  100% { background-color: transparent; }
+} 
