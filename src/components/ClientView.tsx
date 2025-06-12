@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { MapPin, LogOut, Clock, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { lotes } from '../data/lotes';
 import { User, Ticket } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { apiUrls } from '../configs/api';
 
 interface ClientViewProps {
   user: User;
@@ -10,12 +12,55 @@ interface ClientViewProps {
   onLogout: () => void;
 }
 
-export const ClientView: React.FC<ClientViewProps> = ({ user, tickets, onPurchase, onLogout }) => {
+export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, tickets, onPurchase, onLogout }) => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User>(initialUser);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const response = await fetch(apiUrls.users.me, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Error al obtener información del usuario');
+        }
+
+        const userData = await response.json();
+        setUser(userData);
+      } catch (error) {
+        console.error('Error:', error);
+        navigate('/login');
+      }
+    };
+
+    fetchUserInfo();
+  }, [navigate]);
+
   const handlePurchase = (loteId: string) => {
     const lote = lotes.find(l => l.id === loteId);
     if (lote) {
       onPurchase(lote.name);
     }
+  };
+
+  const handleLogout = () => {
+    // Limpiar localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('countryag-user');
+    localStorage.removeItem('countryag-tickets');
+    
+    // Redirigir a login
+    navigate('/login');
   };
 
   const getStatusBadge = (ticket: Ticket) => {
@@ -60,7 +105,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user, tickets, onPurchas
             <p className="text-sm text-gray-600">Hola, {user.name}</p>
           </div>
           <button
-            onClick={onLogout}
+            onClick={handleLogout}
             className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
           >
             <LogOut className="w-5 h-5" />

@@ -29,3 +29,5 @@ export interface LoginCredentials {
   role: 'client' | 'admin';
   name: string;
 }
+
+// Aquí puedes agregar otros tipos globales si los necesitas en el futuro
