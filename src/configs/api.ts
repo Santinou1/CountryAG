@@ -15,6 +15,7 @@ export const apiUrls = {
   boletos: {
     crear: (userId: string) => `${baseUrl}/api/boletos/crear/${userId}`,
     getByUser: (userId: string) => `${baseUrl}/api/boletos/usuario/${userId}`,
+    getAll: `${baseUrl}/api/boletos`,
     marcarIda: (boletoId: string, userId: string) => 
       `${baseUrl}/api/boletos/${boletoId}/marcar-ida/${userId}`,
     marcarVuelta: (boletoId: string, userId: string) => 

@@ -2,18 +2,6 @@ import { useState, useEffect } from 'react';
 import { User, Ticket } from '../types';
 import { useNavigate } from 'react-router-dom';
 
-// Credenciales hardcodeadas
-const validCredentials = [
-  // Clientes
-  { username: 'cliente1', password: '123456', role: 'client', name: 'Juan Pérez' },
-  { username: 'cliente2', password: '123456', role: 'client', name: 'María García' },
-  { username: 'cliente3', password: '123456', role: 'client', name: 'Carlos López' },
-  
-  // Administradores (Choferes)
-  { username: 'chofer1', password: 'admin123', role: 'admin', name: 'Roberto Martínez' },
-  { username: 'chofer2', password: 'admin123', role: 'admin', name: 'Ana Rodríguez' },
-];
-
 export const useApp = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -60,24 +48,6 @@ export const useApp = () => {
       localStorage.removeItem('countryag-user');
     }
   }, [currentUser]);
-
-  const login = (username: string, password: string) => {
-    const credential = validCredentials.find(
-      cred => cred.username === username && cred.password === password
-    );
-
-    if (credential) {
-      const user: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: credential.name,
-        role: credential.role
-      };
-      setCurrentUser(user);
-      setView(credential.role);
-      return true;
-    }
-    return false;
-  };
 
   const logout = () => {
     // Limpiar localStorage
@@ -153,7 +123,6 @@ export const useApp = () => {
   return {
     currentUser,
     view,
-    login,
     logout,
     purchaseTicket,
     confirmTicket,

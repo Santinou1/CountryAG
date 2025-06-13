@@ -35,8 +35,7 @@ export interface Persona {
 }
 
 export interface CreateBoletoBody {
-  idUsers: number;
-  lote: string;
+  lote: string;  // Solo necesitamos el lote, el idUsers viene en la URL
 }
 
 export interface Boleto {

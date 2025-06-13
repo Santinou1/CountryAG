@@ -38,8 +38,6 @@ function App() {
             <ProtectedRoute>
               <ClientView
                 user={currentUser || { id: '', name: '', role: 'client' }}
-                tickets={getUserTickets()}
-                onPurchase={purchaseTicket}
                 onLogout={logout}
               />
             </ProtectedRoute>

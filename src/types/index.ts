@@ -2,6 +2,8 @@ export interface User {
   id: string;
   name: string;
   role: 'admin' | 'usuario';
+  nombre?: string;
+  apellido?: string;
 }
 
 export interface Ticket {

@@ -77,12 +77,24 @@ export const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Iniciar Sesión
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+        <div className="flex flex-col items-center">
+          {/* Logo de árbol */}
+          <svg 
+            className="w-24 h-24 text-green-600 mb-4" 
+            viewBox="0 0 24 24" 
+            fill="currentColor"
+          >
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm0 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+            <path d="M12 19c-1.1 0-2-.9-2-2h4c0 1.1-.9 2-2 2z"/>
+          </svg>
+          <h2 className="text-center text-3xl font-extrabold text-green-800">
+            CountryAG
           </h2>
+          <p className="mt-2 text-center text-sm text-green-600">
+            Conectando con la naturaleza
+          </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
@@ -93,7 +105,7 @@ export const LoginForm = () => {
                 name="email"
                 type="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-t-md relative block w-full px-3 py-3 border border-green-300 placeholder-green-400 text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleChange}
@@ -106,7 +118,7 @@ export const LoginForm = () => {
                 name="contraseña"
                 type="password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-b-md relative block w-full px-3 py-3 border border-green-300 placeholder-green-400 text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder="Contraseña"
                 value={formData.contraseña}
                 onChange={handleChange}
@@ -115,7 +127,7 @@ export const LoginForm = () => {
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center">
+            <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-md border border-red-200">
               {error}
             </div>
           )}
@@ -123,14 +135,14 @@ export const LoginForm = () => {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
             >
               Iniciar Sesión
             </button>
           </div>
 
           <div className="text-sm text-center mt-4">
-            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link to="/register" className="font-medium text-green-600 hover:text-green-500 transition-colors duration-200">
               ¿No tienes cuenta? Regístrate aquí
             </Link>
           </div>

@@ -1,25 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, LogOut, Clock, CheckCircle, ArrowRight, ArrowLeft, Users, DollarSign, ChevronLeft, ChevronRight, Ticket as TicketIcon, Search, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { MapPin, LogOut, Clock, CheckCircle, ArrowRight, ArrowLeft, Users, DollarSign, ChevronLeft, ChevronRight, Ticket as TicketIcon, Search, ChevronsLeft, ChevronsRight, PlusCircle, Loader2, QrCode } from 'lucide-react';
 import { lotes } from '../data/lotes';
 import { User, Ticket, Lote } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { apiUrls } from '../configs/api';
+import { useBoletos } from '../hooks/useBoletos';
+import { QRModal } from './QRModal';
 import './ClientView.css';
 
 interface ClientViewProps {
   user: User;
-  tickets: Ticket[];
-  onPurchase: (destination: string) => void;
   onLogout: () => void;
 }
 
-export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, tickets, onPurchase, onLogout }) => {
+export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, onLogout }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User>(initialUser);
   const [userData, setUserData] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchNumber, setSearchNumber] = useState('');
+  const [showPurchaseSection, setShowPurchaseSection] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [qrTitle, setQrTitle] = useState('');
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
   const itemsPerPage = 4;
+
+  const { 
+    boletos, 
+    isLoading, 
+    error: boletosError, 
+    comprarBoleto, 
+    refreshBoletos,
+    generarQR 
+  } = useBoletos(user.id);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -41,11 +55,13 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, ticke
         }
 
         const data = await response.json();
-        console.log('Respuesta del endpoint /me:', data);
         setUserData(data);
-        setUser(data);
+        setUser(prev => ({
+          ...prev,
+          nombre: data.nombre,
+          apellido: data.apellido
+        }));
 
-        // Redirigir a admin si el rol es 'admin'
         if (data.rol === 'admin') {
           navigate('/admin');
         }
@@ -58,10 +74,13 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, ticke
     fetchUserInfo();
   }, [navigate]);
 
-  const handlePurchase = (loteId: string) => {
-    const lote = lotes.find(l => l.id === loteId);
-    if (lote) {
-      onPurchase(lote.name);
+  const handlePurchase = async (loteId: string) => {
+    try {
+      setPurchaseError(null);
+      await comprarBoleto(loteId);
+      setShowPurchaseSection(false); // Volver a la vista de boletos después de comprar
+    } catch (err) {
+      setPurchaseError(err instanceof Error ? err.message : 'Error al comprar el boleto');
     }
   };
 
@@ -102,6 +121,20 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, ticke
     setSearchNumber('');
   };
 
+  const handleGenerarQR = async (boletoId: string, tipo: 'ida' | 'vuelta') => {
+    try {
+      setIsGeneratingQR(true);
+      const qr = await generarQR(boletoId, tipo);
+      setQrTitle(`Código QR - ${tipo === 'ida' ? 'Ida' : 'Vuelta'}`);
+      setQrData(qr);
+    } catch (err) {
+      console.error('Error al generar QR:', err);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  };
+
   const getStatusBadge = (ticket: Ticket) => {
     switch (ticket.status) {
       case 'pending':
@@ -119,16 +152,46 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, ticke
 
   const getUsageInfo = (ticket: Ticket) => {
     return (
-      <div className="flex items-center gap-4 mt-2">
-        <div className={`flex items-center gap-1 ${ticket.uses.ida ? 'text-green-600' : 'text-gray-400'}`}>
-          <ArrowRight className="w-4 h-4" />
-          <span className="text-sm">Ida</span>
-          {ticket.uses.ida && <CheckCircle className="w-3 h-3" />}
+      <div className="flex flex-col gap-2 mt-2">
+        <div className="flex items-center gap-4">
+          <div className={`flex items-center gap-1 ${ticket.uses.ida ? 'text-green-600' : 'text-gray-400'}`}>
+            <ArrowRight className="w-4 h-4" />
+            <span className="text-sm">Ida</span>
+            {ticket.uses.ida && <CheckCircle className="w-3 h-3" />}
+          </div>
+          <div className={`flex items-center gap-1 ${ticket.uses.vuelta ? 'text-green-600' : 'text-gray-400'}`}>
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Vuelta</span>
+            {ticket.uses.vuelta && <CheckCircle className="w-3 h-3" />}
+          </div>
         </div>
-        <div className={`flex items-center gap-1 ${ticket.uses.vuelta ? 'text-green-600' : 'text-gray-400'}`}>
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Vuelta</span>
-          {ticket.uses.vuelta && <CheckCircle className="w-3 h-3" />}
+        
+        {/* Botones de QR */}
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => handleGenerarQR(ticket.id, 'ida')}
+            disabled={ticket.uses.ida || isGeneratingQR}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+              ticket.uses.ida
+                ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            <QrCode className="w-4 h-4" />
+            {isGeneratingQR ? 'Generando...' : 'QR Ida'}
+          </button>
+          <button
+            onClick={() => handleGenerarQR(ticket.id, 'vuelta')}
+            disabled={ticket.uses.vuelta || isGeneratingQR}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+              ticket.uses.vuelta
+                ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                : 'bg-orange-600 text-white hover:bg-orange-700'
+            }`}
+          >
+            <QrCode className="w-4 h-4" />
+            {isGeneratingQR ? 'Generando...' : 'QR Vuelta'}
+          </button>
         </div>
       </div>
     );
@@ -160,7 +223,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, ticke
           <div>
             <h1 className="text-xl font-bold text-gray-900">Mis Boletos</h1>
             <p className="text-sm text-gray-600">
-              ¡Hola, {userData ? `${userData.nombre} ${userData.apellido}` : user.nombre}!
+              ¡Hola, {userData?.nombre && userData?.apellido ? `${userData.nombre} ${userData.apellido}` : user.name}!
             </p>
           </div>
           <button
@@ -173,142 +236,197 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser, ticke
       </div>
 
       <div className="max-w-md mx-auto p-4 space-y-6">
-        {/* Buscador de Lotes */}
-        <div className="bg-white p-4 rounded-xl shadow-sm">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={searchNumber}
-                onChange={(e) => setSearchNumber(e.target.value)}
-                placeholder="Buscar por número de lote (1-100)"
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
-              />
-              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Buscar
-            </button>
-          </form>
-        </div>
-
-        {/* Lotes Grid */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Seleccionar Lote</h2>
-          <div className="grid grid-cols-1 gap-4">
-            {currentLotes.map(lote => (
-              <button
-                key={lote.id}
-                id={`lote-${lote.number}`}
-                onClick={() => handlePurchase(lote.id)}
-                className="p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="font-medium text-gray-900 group-hover:text-green-600">{lote.name}</div>
-                    <div className="text-sm text-gray-500">Lote #{lote.number}</div>
-                  </div>
-                  <div className="text-lg font-semibold text-green-600">
-                    ${lote.price.toLocaleString('es-AR')}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <TicketIcon className="w-4 h-4" />
-                  <span>{lote.description}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Paginación */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-6">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                title="Ir al inicio"
-              >
-                <ChevronsLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                title="Página anterior"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              {getPageRange().map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`w-8 h-8 rounded-lg ${
-                    currentPage === page
-                      ? 'bg-green-600 text-white'
-                      : 'border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                title="Página siguiente"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                title="Ir al final"
-              >
-                <ChevronsRight className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Tickets List */}
+        {/* Tickets List - Ahora es la sección principal */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Mis Boletos</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900">Mis Boletos</h2>
+            <button
+              onClick={() => setShowPurchaseSection(!showPurchaseSection)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <PlusCircle className="w-5 h-5" />
+              {showPurchaseSection ? 'Ver Mis Boletos' : 'Comprar Nuevo Boleto'}
+            </button>
+          </div>
           
-          {tickets.length === 0 ? (
-            <div className="text-center py-8">
-              <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No tienes boletos aún</p>
-              <p className="text-sm text-gray-400">Selecciona un lote para comprar tu primer boleto</p>
-            </div>
-          ) : (
-            tickets
-              .sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime())
-              .map(ticket => (
-                <div key={ticket.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <MapPin className="w-4 h-4 text-green-600" />
-                        <span className="font-medium text-gray-900">{ticket.destination}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="w-3 h-3" />
-                        {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    {getStatusBadge(ticket)}
-                  </div>
-                  {getUsageInfo(ticket)}
+          {!showPurchaseSection && (
+            <>
+              {isLoading ? (
+                <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100">
+                  <Loader2 className="w-8 h-8 text-green-600 animate-spin mx-auto mb-3" />
+                  <p className="text-gray-600">Cargando boletos...</p>
                 </div>
-              ))
+              ) : boletosError ? (
+                <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-red-100">
+                  <p className="text-red-600 mb-2">Error al cargar los boletos</p>
+                  <button
+                    onClick={() => refreshBoletos()}
+                    className="text-sm text-green-600 hover:text-green-700"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
+              ) : boletos.length === 0 ? (
+                <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100">
+                  <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No tienes boletos aún</p>
+                  <p className="text-sm text-gray-400 mb-4">Compra tu primer boleto para visitar nuestros lotes</p>
+                  <button
+                    onClick={() => setShowPurchaseSection(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                    Comprar Boleto
+                  </button>
+                </div>
+              ) : (
+                boletos
+                  .sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime())
+                  .map(ticket => (
+                    <div key={ticket.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MapPin className="w-4 h-4 text-green-600" />
+                            <span className="font-medium text-gray-900">{ticket.destination}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Clock className="w-3 h-3" />
+                            {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                        {getStatusBadge(ticket)}
+                      </div>
+                      {getUsageInfo(ticket)}
+                    </div>
+                  ))
+              )}
+            </>
+          )}
+
+          {/* Sección de Compra */}
+          {showPurchaseSection && (
+            <>
+              {purchaseError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4">
+                  {purchaseError}
+                </div>
+              )}
+              
+              {/* Buscador de Lotes */}
+              <div className="bg-white p-4 rounded-xl shadow-sm">
+                <form onSubmit={handleSearch} className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={searchNumber}
+                      onChange={(e) => setSearchNumber(e.target.value)}
+                      placeholder="Buscar por número de lote (1-100)"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
+                    />
+                    <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Buscar
+                  </button>
+                </form>
+              </div>
+
+              {/* Lotes Grid */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Seleccionar Lote</h2>
+                <div className="grid grid-cols-1 gap-4">
+                  {currentLotes.map(lote => (
+                    <button
+                      key={lote.id}
+                      id={`lote-${lote.number}`}
+                      onClick={() => handlePurchase(lote.id)}
+                      className="p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-medium text-gray-900 group-hover:text-green-600">{lote.name}</div>
+                          <div className="text-sm text-gray-500">Lote #{lote.number}</div>
+                        </div>
+                        <div className="text-lg font-semibold text-green-600">
+                          ${lote.price.toLocaleString('es-AR')}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <TicketIcon className="w-4 h-4" />
+                        <span>{lote.description}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Paginación */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-6">
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Ir al inicio"
+                    >
+                      <ChevronsLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Página anterior"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    {getPageRange().map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`w-8 h-8 rounded-lg ${
+                          currentPage === page
+                            ? 'bg-green-600 text-white'
+                            : 'border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Página siguiente"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Ir al final"
+                    >
+                      <ChevronsRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
+
+      {/* Modal de QR */}
+      {qrData && (
+        <QRModal
+          qrData={qrData}
+          onClose={() => setQrData(null)}
+          title={qrTitle}
+        />
+      )}
     </div>
   );
 };
