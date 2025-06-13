@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiUrls } from '../configs/api';
-import { Boleto, CreateBoletoBody } from '../configs/interfaces';
+import { Boleto} from '../configs/interfaces';
 import { Ticket } from '../types';
 
 interface UseBoletosReturn {
