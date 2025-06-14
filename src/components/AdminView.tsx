@@ -21,23 +21,45 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
       ticket.clientName.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (activeTab === 'pending') {
-      return matchesSearch && ticket.status === 'confirmed';
+      return matchesSearch && ticket.status === 'confirmed' && !ticket.uses.ida;
     } else if (activeTab === 'confirmed') {
-      return matchesSearch && (ticket.status === 'used-ida' || ticket.status === 'completed');
+      return matchesSearch && (ticket.status === 'used-ida' || ticket.status === 'completed' || ticket.uses.ida);
     } else {
-      return matchesSearch && (ticket.status === 'completed' || ticket.uses.ida);
+      return matchesSearch && (ticket.status === 'completed' || ticket.uses.ida || ticket.uses.vuelta);
     }
   });
 
-  const pendingTickets = filteredBoletos.filter(ticket => ticket.status === 'confirmed');
+  const pendingTickets = filteredBoletos.filter(ticket => 
+    ticket.status === 'confirmed' && !ticket.uses.ida
+  );
   const confirmedTickets = filteredBoletos.filter(ticket => 
-    ticket.status === 'used-ida' || ticket.status === 'completed'
+    (ticket.status === 'used-ida' || ticket.status === 'completed' || ticket.uses.ida)
   );
 
   const handleUseTicket = async (ticketId: string, type: 'ida' | 'vuelta') => {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('No hay token de autenticación');
+
+      // Actualizar el estado local primero
+      const updatedBoletos = boletos.map(ticket => {
+        if (ticket.id === ticketId) {
+          return {
+            ...ticket,
+            uses: {
+              ...ticket.uses,
+              [type]: true
+            },
+            status: type === 'ida' ? 'used-ida' : 
+                   (ticket.uses.ida && type === 'vuelta') ? 'completed' : 
+                   ticket.status
+          };
+        }
+        return ticket;
+      });
+
+      // Actualizar el estado local
+      refreshBoletos();
 
       const url = type === 'ida' 
         ? apiUrls.boletos.marcarIda(ticketId, user.id)
@@ -55,10 +77,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
         throw new Error('Error al marcar el boleto');
       }
 
+      // Actualizar los datos después de la llamada exitosa
       await refreshBoletos();
     } catch (err) {
       console.error('Error al usar boleto:', err);
-      // Aquí podrías mostrar un mensaje de error al usuario
+      // Si hay error, refrescar para asegurar que el estado está sincronizado
+      await refreshBoletos();
     }
   };
 

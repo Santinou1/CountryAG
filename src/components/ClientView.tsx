@@ -37,20 +37,20 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   } = useBoletos(user.id);
 
   const fetchUserInfo = useCallback(async () => {
-    try {
+      try {
       setIsLoadingUser(true);
       setUserError(null);
       
-      const token = localStorage.getItem('access_token');
-      if (!token) {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
         throw new Error('No hay token de autenticación');
-      }
+        }
 
-      const response = await fetch(apiUrls.users.me, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+        const response = await fetch(apiUrls.users.me, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
 
       if (response.status === 401) {
         // Token expirado o inválido
@@ -59,17 +59,17 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
         throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
       }
 
-      if (!response.ok) {
-        throw new Error('Error al obtener información del usuario');
-      }
+        if (!response.ok) {
+          throw new Error('Error al obtener información del usuario');
+        }
 
-      const data = await response.json();
+        const data = await response.json();
       
       // Actualizar el estado del usuario
       const updatedUser = {
         ...initialUser,
         id: data.id.toString(),
-        nombre: data.nombre,
+          nombre: data.nombre,
         apellido: data.apellido,
         rol: data.rol.toLowerCase()
       };
@@ -81,12 +81,12 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
         id: updatedUser.id,
         name: `${updatedUser.nombre} ${updatedUser.apellido}`,
         role: updatedUser.rol
-      }));
+        }));
 
       if (data.rol.toLowerCase() === 'admin') {
-        navigate('/admin');
-      }
-    } catch (error) {
+          navigate('/admin');
+        }
+      } catch (error) {
       console.error('Error al obtener información del usuario:', error);
       setUserError(error instanceof Error ? error.message : 'Error al cargar datos del usuario');
       
@@ -287,8 +287,8 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
               className="relative z-10 flex items-center gap-1"
               animate={isGeneratingThisTicket ? { scale: [1, 1.1, 1] } : {}}
               transition={{ duration: 1, repeat: Infinity }}
-            >
-              <QrCode className="w-4 h-4" />
+          >
+            <QrCode className="w-4 h-4" />
               {isGeneratingThisTicket ? 'Generando...' : 'QR Ida'}
             </motion.div>
           </motion.button>
@@ -326,8 +326,8 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
               className="relative z-10 flex items-center gap-1"
               animate={isGeneratingThisTicket ? { scale: [1, 1.1, 1] } : {}}
               transition={{ duration: 1, repeat: Infinity }}
-            >
-              <QrCode className="w-4 h-4" />
+          >
+            <QrCode className="w-4 h-4" />
               {isGeneratingThisTicket ? 'Generando...' : 'QR Vuelta'}
             </motion.div>
           </motion.button>
@@ -383,9 +383,9 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             ) : userError ? (
               <p className="text-sm text-red-600">{userError}</p>
             ) : (
-              <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600">
                 Hola, {user.nombre} {user.apellido}
-              </p>
+            </p>
             )}
           </motion.div>
           <motion.button
@@ -409,72 +409,72 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             transition={{ duration: 0.3 }}
             className="space-y-4"
           >
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Mis Boletos</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900">Mis Boletos</h2>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowPurchaseSection(!showPurchaseSection)}
+              onClick={() => setShowPurchaseSection(!showPurchaseSection)}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 shadow-md hover:shadow-lg"
-              >
-                <PlusCircle className="w-5 h-5" />
-                {showPurchaseSection ? 'Ver Mis Boletos' : 'Comprar Nuevo Boleto'}
+            >
+              <PlusCircle className="w-5 h-5" />
+              {showPurchaseSection ? 'Ver Mis Boletos' : 'Comprar Nuevo Boleto'}
               </motion.button>
-            </div>
-
-            {!showPurchaseSection && (
+          </div>
+          
+          {!showPurchaseSection && (
               <AnimatePresence mode="wait">
-                {isLoading ? (
+              {isLoading ? (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100"
                   >
-                    <Loader2 className="w-8 h-8 text-green-600 animate-spin mx-auto mb-3" />
-                    <p className="text-gray-600">Cargando boletos...</p>
+                  <Loader2 className="w-8 h-8 text-green-600 animate-spin mx-auto mb-3" />
+                  <p className="text-gray-600">Cargando boletos...</p>
                   </motion.div>
-                ) : boletosError ? (
+              ) : boletosError ? (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     className="text-center py-8 bg-white rounded-xl shadow-sm border border-red-100"
                   >
-                    <p className="text-red-600 mb-2">Error al cargar los boletos</p>
+                  <p className="text-red-600 mb-2">Error al cargar los boletos</p>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => refreshBoletos()}
-                      className="text-sm text-green-600 hover:text-green-700"
-                    >
-                      Intentar de nuevo
+                    onClick={() => refreshBoletos()}
+                    className="text-sm text-green-600 hover:text-green-700"
+                  >
+                    Intentar de nuevo
                     </motion.button>
                   </motion.div>
-                ) : boletos.length === 0 ? (
+              ) : boletos.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100"
                   >
-                    <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No tienes boletos aún</p>
-                    <p className="text-sm text-gray-400 mb-4">Compra tu primer boleto para visitar nuestros lotes</p>
+                  <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No tienes boletos aún</p>
+                  <p className="text-sm text-gray-400 mb-4">Compra tu primer boleto para visitar nuestros lotes</p>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setShowPurchaseSection(true)}
+                    onClick={() => setShowPurchaseSection(true)}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 shadow-md hover:shadow-lg"
-                    >
-                      <PlusCircle className="w-5 h-5" />
-                      Comprar Boleto
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                    Comprar Boleto
                     </motion.button>
                   </motion.div>
-                ) : (
+              ) : (
                   <div className="space-y-4">
                     {boletos
-                      .sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime())
+                  .sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime())
                       .map((ticket, index) => (
                         <motion.div
                           key={ticket.id}
@@ -484,44 +484,44 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                           whileHover={{ scale: 1.02 }}
                           className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
                         >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <MapPin className="w-4 h-4 text-green-600" />
-                                <span className="font-medium text-gray-900">{ticket.destination}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <Clock className="w-3 h-3" />
-                                {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            {getStatusBadge(ticket)}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MapPin className="w-4 h-4 text-green-600" />
+                            <span className="font-medium text-gray-900">{ticket.destination}</span>
                           </div>
-                          {getUsageInfo(ticket)}
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Clock className="w-3 h-3" />
+                            {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                        {getStatusBadge(ticket)}
+                      </div>
+                      {getUsageInfo(ticket)}
                         </motion.div>
                       ))}
-                  </div>
-                )}
+                    </div>
+              )}
               </AnimatePresence>
-            )}
+          )}
 
-            {showPurchaseSection && (
+          {showPurchaseSection && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6"
               >
-                {purchaseError && (
+              {purchaseError && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4"
                   >
-                    {purchaseError}
+                  {purchaseError}
                   </motion.div>
-                )}
-
+              )}
+              
                 {/* Buscador de Lotes con animación */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -529,119 +529,119 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                   transition={{ delay: 0.2 }}
                   className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300"
                 >
-                  <form onSubmit={handleSearch} className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={searchNumber}
-                        onChange={(e) => setSearchNumber(e.target.value)}
-                        placeholder="Buscar por número de lote (1-100)"
+                <form onSubmit={handleSearch} className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={searchNumber}
+                      onChange={(e) => setSearchNumber(e.target.value)}
+                      placeholder="Buscar por número de lote (1-100)"
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300"
-                      />
-                      <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    </div>
+                    />
+                    <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  </div>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      type="submit"
+                    type="submit"
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 shadow-md hover:shadow-lg"
-                    >
-                      Buscar
+                  >
+                    Buscar
                     </motion.button>
-                  </form>
+                </form>
                 </motion.div>
 
                 {/* Grid de Lotes con animaciones */}
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Seleccionar Lote</h2>
-                  <div className="grid grid-cols-1 gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Seleccionar Lote</h2>
+                <div className="grid grid-cols-1 gap-4">
                     {currentLotes.map((lote, index) => (
                       <motion.button
-                        key={lote.id}
-                        id={`lote-${lote.number}`}
+                      key={lote.id}
+                      id={`lote-${lote.number}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
                         whileHover={{ scale: 1.02, y: -2 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => handlePurchase(lote.id)}
+                      onClick={() => handlePurchase(lote.id)}
                         className="p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-300 text-left group shadow-sm hover:shadow-md"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <div className="font-medium text-gray-900 group-hover:text-green-600">{lote.name}</div>
-                            <div className="text-sm text-gray-500">Lote #{lote.number}</div>
-                          </div>
-                          <div className="text-lg font-semibold text-green-600">
-                            ${lote.price.toLocaleString('es-AR')}
-                          </div>
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-medium text-gray-900 group-hover:text-green-600">{lote.name}</div>
+                          <div className="text-sm text-gray-500">Lote #{lote.number}</div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <TicketIcon className="w-4 h-4" />
-                          <span>{lote.description}</span>
+                        <div className="text-lg font-semibold text-green-600">
+                          ${lote.price.toLocaleString('es-AR')}
                         </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <TicketIcon className="w-4 h-4" />
+                        <span>{lote.description}</span>
+                      </div>
                       </motion.button>
-                    ))}
-                  </div>
+                  ))}
+                </div>
 
                   {/* Paginación con animaciones */}
-                  {totalPages > 1 && (
+                {totalPages > 1 && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
                       className="flex justify-center items-center gap-2 mt-6"
                     >
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Ir al inicio"
+                    >
+                      <ChevronsLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Página anterior"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    {getPageRange().map((page) => (
                       <button
-                        onClick={() => handlePageChange(1)}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                        title="Ir al inicio"
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`w-8 h-8 rounded-lg ${
+                          currentPage === page
+                            ? 'bg-green-600 text-white'
+                            : 'border border-gray-200 hover:bg-gray-50'
+                        }`}
                       >
-                        <ChevronsLeft className="w-5 h-5" />
+                        {page}
                       </button>
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                        title="Página anterior"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      {getPageRange().map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`w-8 h-8 rounded-lg ${
-                            currentPage === page
-                              ? 'bg-green-600 text-white'
-                              : 'border border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                        title="Página siguiente"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handlePageChange(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                        title="Ir al final"
-                      >
-                        <ChevronsRight className="w-5 h-5" />
-                      </button>
+                    ))}
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Página siguiente"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      title="Ir al final"
+                    >
+                      <ChevronsRight className="w-5 h-5" />
+                    </button>
                     </motion.div>
-                  )}
-                </div>
+                )}
+              </div>
               </motion.div>
-            )}
+          )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -649,16 +649,16 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       {/* Modal de QR con animación */}
       <AnimatePresence>
         {(qrData || isGeneratingQR) && (
-          <QRModal
+        <QRModal
             qrData={qrData || ''}
             onClose={() => {
               setQrData(null);
               setIsGeneratingQR(null);
             }}
-            title={qrTitle}
+          title={qrTitle}
             isLoading={isGeneratingQR !== null}
-          />
-        )}
+        />
+      )}
       </AnimatePresence>
     </motion.div>
   );
