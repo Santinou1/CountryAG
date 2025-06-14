@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { MapPin, LogOut, Clock, CheckCircle, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Ticket as TicketIcon, Search, ChevronsLeft, ChevronsRight, PlusCircle, Loader2, QrCode } from 'lucide-react';
 import { lotes } from '../data/lotes';
 import { User, Ticket } from '../types';
@@ -16,7 +16,8 @@ interface ClientViewProps {
 export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User>(initialUser);
-  const [userData, setUserData] = useState<User | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [userError, setUserError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchNumber, setSearchNumber] = useState('');
   const [showPurchaseSection, setShowPurchaseSection] = useState(false);
@@ -35,44 +36,93 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     generarQR 
   } = useBoletos(user.id);
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
+  const fetchUserInfo = useCallback(async () => {
+    try {
+      setIsLoadingUser(true);
+      setUserError(null);
+      
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
 
-        const response = await fetch(apiUrls.users.me, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+      const response = await fetch(apiUrls.users.me, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error('Error al obtener información del usuario');
-        }
+      if (response.status === 401) {
+        // Token expirado o inválido
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('countryag-user');
+        throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+      }
 
-        const data = await response.json();
-        setUserData(data);
-        setUser(prev => ({
-          ...prev,
-          nombre: data.nombre,
-          apellido: data.apellido
-        }));
+      if (!response.ok) {
+        throw new Error('Error al obtener información del usuario');
+      }
 
-        if (data.rol === 'admin') {
-          navigate('/admin');
-        }
-      } catch (error) {
-        console.error('Error:', error);
+      const data = await response.json();
+      
+      // Actualizar el estado del usuario
+      const updatedUser = {
+        ...initialUser,
+        id: data.id.toString(),
+        nombre: data.nombre,
+        apellido: data.apellido,
+        rol: data.rol.toLowerCase()
+      };
+      
+      setUser(updatedUser);
+      
+      // Actualizar el usuario en localStorage
+      localStorage.setItem('countryag-user', JSON.stringify({
+        id: updatedUser.id,
+        name: `${updatedUser.nombre} ${updatedUser.apellido}`,
+        role: updatedUser.rol
+      }));
+
+      if (data.rol.toLowerCase() === 'admin') {
+        navigate('/admin');
+      }
+    } catch (error) {
+      console.error('Error al obtener información del usuario:', error);
+      setUserError(error instanceof Error ? error.message : 'Error al cargar datos del usuario');
+      
+      if (error instanceof Error && (
+        error.message.includes('Sesión expirada') || 
+        error.message.includes('No hay token')
+      )) {
         navigate('/login');
+      }
+    } finally {
+      setIsLoadingUser(false);
+    }
+  }, [initialUser, navigate]);
+
+  // Efecto para cargar la información del usuario
+  useEffect(() => {
+    fetchUserInfo();
+  }, [fetchUserInfo]);
+
+  // Efecto para manejar cambios en el token
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'access_token') {
+        if (!e.newValue) {
+          // Token eliminado
+          navigate('/login');
+        } else {
+          // Token actualizado
+          fetchUserInfo();
+        }
       }
     };
 
-    fetchUserInfo();
-  }, [navigate]);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [fetchUserInfo, navigate]);
 
   const handlePurchase = async (loteId: string) => {
     try {
@@ -94,15 +144,19 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     setCurrentPage(pageNumber);
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     // Limpiar localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('countryag-user');
     localStorage.removeItem('countryag-tickets');
     
+    // Limpiar estado
+    setUser(initialUser);
+    setUserError(null);
+    
     // Redirigir a login
     navigate('/login');
-  };
+  }, [initialUser, navigate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,7 +361,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       transition={{ duration: 0.5 }}
       className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100"
     >
-      {/* Header con efecto de glassmorphism */}
+      {/* Header con efecto glassmorphism */}
       <motion.div 
         initial={{ y: -20 }}
         animate={{ y: 0 }}
@@ -321,13 +375,22 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             transition={{ delay: 0.2 }}
           >
             <h1 className="text-xl font-bold text-gray-900">Mis Boletos</h1>
-            <p className="text-sm text-gray-600">
-              ¡Hola, {userData?.nombre && userData?.apellido ? `${userData.nombre} ${userData.apellido}` : user.name}!
-            </p>
+            {isLoadingUser ? (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Cargando datos...
+              </div>
+            ) : userError ? (
+              <p className="text-sm text-red-600">{userError}</p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Hola, {user.nombre} {user.apellido}
+              </p>
+            )}
           </motion.div>
           <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleLogout}
             className="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-100"
           >
