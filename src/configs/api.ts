@@ -16,10 +16,21 @@ export const apiUrls = {
     crear: (userId: string) => `${baseUrl}/api/boletos/crear/${userId}`,
     getByUser: (userId: string) => `${baseUrl}/api/boletos/usuario/${userId}`,
     getAll: `${baseUrl}/api/boletos`,
+    getPendientes: `${baseUrl}/api/boletos/pendientes`,
+    getConfirmados: `${baseUrl}/api/boletos/confirmados`,
+    getConsumidos: `${baseUrl}/api/boletos/consumidos`,
     marcarIda: (boletoId: string, userId: string) => 
       `${baseUrl}/api/boletos/${boletoId}/marcar-ida/${userId}`,
     marcarVuelta: (boletoId: string, userId: string) => 
       `${baseUrl}/api/boletos/${boletoId}/marcar-vuelta/${userId}`,
+    aprobar: (boletoId: string, userId: string) =>
+      `${baseUrl}/api/boletos/${boletoId}/aprobar/${userId}`,
+    rechazar: (boletoId: string, userId: string) =>
+      `${baseUrl}/api/boletos/${boletoId}/rechazar/${userId}`,
+    consumirIda: (codigo: string) =>
+      `${baseUrl}/api/boletos/consumir-ida/${codigo}`,
+    consumirVuelta: (codigo: string) =>
+      `${baseUrl}/api/boletos/consumir-vuelta/${codigo}`,
   },
   qr: {
     generarIda: (boletoId: string, userId: string) => 

@@ -13,6 +13,12 @@ interface ClientViewProps {
   user: User;
 }
 
+interface QRData {
+    qrCode: string;
+    codigo: string;
+    type: 'ida' | 'vuelta';
+}
+
 export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User>(initialUser);
@@ -22,7 +28,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [searchNumber, setSearchNumber] = useState('');
   const [showPurchaseSection, setShowPurchaseSection] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
-  const [qrData, setQrData] = useState<string | null>(null);
+  const [qrData, setQrData] = useState<QRData | null>(null);
   const [qrTitle, setQrTitle] = useState('');
   const [isGeneratingQR, setIsGeneratingQR] = useState<string | null>(null);
   const itemsPerPage = 4;
@@ -183,8 +189,8 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const qr = await generarQR(boletoId, tipo);
-      setQrData(qr);
+      const qrResponse = await generarQR(boletoId, tipo);
+      setQrData(qrResponse);
     } catch (err) {
       console.error('Error al generar QR:', err);
       // Aquí podrías mostrar un mensaje de error al usuario
@@ -650,13 +656,11 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       <AnimatePresence>
         {(qrData || isGeneratingQR) && (
         <QRModal
-            qrData={qrData || ''}
-            onClose={() => {
-              setQrData(null);
-              setIsGeneratingQR(null);
-            }}
-          title={qrTitle}
-            isLoading={isGeneratingQR !== null}
+            isOpen={!!qrData}
+            onClose={() => setQrData(null)}
+            title={qrTitle}
+            qrCode={qrData?.qrCode || ''}
+            codigo={qrData?.codigo || ''}
         />
       )}
       </AnimatePresence>

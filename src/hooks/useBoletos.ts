@@ -12,6 +12,12 @@ interface UseBoletosReturn {
   generarQR: (boletoId: string, tipo: 'ida' | 'vuelta') => Promise<string>;
 }
 
+interface QRResponse {
+    qrCode: string;
+    codigo: string;
+    type: 'ida' | 'vuelta';
+}
+
 export const useBoletos = (userId: string | undefined): UseBoletosReturn => {
   const [boletos, setBoletos] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,7 +158,7 @@ export const useBoletos = (userId: string | undefined): UseBoletosReturn => {
   }, [userId, validarAutenticacion, obtenerBoletos]);
 
   // Función para generar el código QR
-  const generarQR = useCallback(async (boletoId: string, tipo: 'ida' | 'vuelta'): Promise<string> => {
+  const generarQR = useCallback(async (boletoId: string, tipo: 'ida' | 'vuelta'): Promise<QRResponse> => {
     try {
       const token = validarAutenticacion();
 
@@ -178,13 +184,16 @@ export const useBoletos = (userId: string | undefined): UseBoletosReturn => {
         throw new Error(errorData.message || 'Error al generar QR');
       }
 
-      const qrBase64 = await response.text();
-      
-      if (!qrBase64.startsWith('data:image/png;base64,')) {
-        throw new Error('Formato de respuesta inválido');
+      const data = await response.json();
+      if (!data.qrCode || !data.codigo) {
+        throw new Error('Respuesta inválida del servidor');
       }
 
-      return qrBase64;
+      return {
+        qrCode: data.qrCode,
+        codigo: data.codigo,
+        type: data.type
+      };
     } catch (error) {
       console.error('Error al generar QR:', error);
       throw error;

@@ -12,7 +12,7 @@ export interface Ticket {
   clientName: string;
   destination: string;
   purchaseDate: Date;
-  status: 'pending' | 'confirmed' | 'used-ida' | 'completed';
+  status: 'pendiente' | 'aprobado' | 'rechazado' | 'used-ida' | 'completed';
   uses: {
     ida: boolean;
     vuelta: boolean;
