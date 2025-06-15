@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, CheckCircle, MapPin, User, ArrowRight, ArrowLeft, History, Loader2, Search, X } from 'lucide-react';
+import { LogOut, Clock, CheckCircle, MapPin, User, ArrowRight, ArrowLeft, History, Loader2, Search, X, Camera } from 'lucide-react';
 import { User as UserType, Ticket } from '../types';
 import { useAdminBoletos } from '../hooks/useAdminBoletos';
 import { apiUrls } from '../configs/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import Webcam from 'react-webcam';
+import { QRScanner } from './QRScanner';
 
 interface AdminViewProps {
   user: UserType;
@@ -14,6 +15,7 @@ interface AdminViewProps {
 export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'history'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const { boletos, isLoading, error, refreshBoletos, fetchBoletosByTab } = useAdminBoletos();
 
   // Efecto para cargar boletos cuando cambia la pestaña
@@ -161,6 +163,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
       console.error('Error al usar boleto:', err);
       // Si hay error, refrescar para asegurar que el estado está sincronizado
       await refreshBoletos();
+    }
+  };
+
+  const handleQRScan = async (data: { boletoId: number; type: 'ida' | 'vuelta'; codigo: string }) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No hay token de autenticación');
+
+      // Usar directamente el endpoint de consumo según el tipo
+      const url = data.type === 'ida' 
+        ? apiUrls.boletos.consumirIda(data.codigo)
+        : apiUrls.boletos.consumirVuelta(data.codigo);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al procesar el boleto');
+      }
+
+      alert('Boleto procesado exitosamente');
+      setIsScannerOpen(false);
+      await refreshBoletos();
+    } catch (err) {
+      console.error('Error al procesar boleto:', err);
+      alert(err instanceof Error ? err.message : 'Error al procesar el boleto');
     }
   };
 
@@ -386,14 +420,24 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
               Hola, {user?.nombre} {user?.apellido}
             </p>
           </motion.div>
-          <motion.button
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onLogout}
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-100"
-          >
-            <LogOut className="w-5 h-5" />
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setIsScannerOpen(true)}
+              className="p-2 text-blue-600 hover:text-blue-700 transition-colors rounded-full hover:bg-blue-50"
+            >
+              <Camera className="w-5 h-5" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onLogout}
+              className="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-100"
+            >
+              <LogOut className="w-5 h-5" />
+            </motion.button>
+          </div>
         </div>
       </motion.div>
 
@@ -679,6 +723,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
           </AnimatePresence>
         </div>
       </div>
+
+      <QRScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={handleQRScan}
+      />
     </motion.div>
   );
 };

@@ -30,7 +30,7 @@ export const apiUrls = {
     consumirIda: (codigo: string) =>
       `${baseUrl}/api/boletos/consumir-ida/${codigo}`,
     consumirVuelta: (codigo: string) =>
-      `${baseUrl}/api/boletos/consumir-vuelta/${codigo}`,
+      `${baseUrl}/api/boletos/consumir-vuelta/${codigo}`
   },
   qr: {
     generarIda: (boletoId: string, userId: string) => 
