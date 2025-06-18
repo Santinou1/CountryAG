@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiUrls } from '../../configs/api';
 
@@ -25,6 +25,14 @@ export const LoginForm = () => {
     email: '',
     contraseña: '',
   });
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('countryag-user') || 'null');
+    if (user && user.role) {
+      if (user.role === 'admin') navigate('/admin');
+      else if (user.role === 'usuario') navigate('/home');
+    }
+  }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -63,7 +71,11 @@ export const LoginForm = () => {
         name: `${data.user.nombre} ${data.user.apellido}`,
         role: data.user.rol.toLowerCase()
       };
+      console.log('ROL recibido:', data.user.rol);
+      console.log('userToSave:', userToSave);
       localStorage.setItem('countryag-user', JSON.stringify(userToSave));
+      // Forzar sincronización inmediata en la misma pestaña
+      window.dispatchEvent(new StorageEvent('storage', { key: 'countryag-user', newValue: JSON.stringify(userToSave) }));
       
       // Redirigir según el rol del usuario
       if (data.user.rol.toLowerCase() === 'admin') {

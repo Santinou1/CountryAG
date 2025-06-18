@@ -9,7 +9,7 @@ interface UseBoletosReturn {
   error: string | null;
   comprarBoleto: (loteId: string) => Promise<void>;
   refreshBoletos: () => Promise<void>;
-  generarQR: (boletoId: string, tipo: 'ida' | 'vuelta') => Promise<string>;
+  generarQR: (boletoId: string, tipo?: 'ida' | 'vuelta') => Promise<string>;
 }
 
 interface QRResponse {
@@ -43,13 +43,15 @@ export const useBoletos = (userId: string | undefined): UseBoletosReturn => {
       clientName: '', // Se llenará cuando obtengamos los datos del usuario
       destination: boleto.lote,
       purchaseDate: new Date(boleto.createdAt || Date.now()),
-      status: boleto.ida && boleto.vuelta ? 'completed' : 
-              boleto.ida ? 'used-ida' : 
-              'confirmed',
+      status: boleto.estado || 'pendiente',
       uses: {
         ida: boleto.ida,
         vuelta: boleto.vuelta
-      }
+      },
+      createdAt: boleto.createdAt,
+      validoHasta: boleto.validoHasta,
+      qrValidoHasta: boleto.qrValidoHasta,
+      estado: boleto.estado,
     };
   }, []);
 
@@ -158,13 +160,12 @@ export const useBoletos = (userId: string | undefined): UseBoletosReturn => {
   }, [userId, validarAutenticacion, obtenerBoletos]);
 
   // Función para generar el código QR
-  const generarQR = useCallback(async (boletoId: string, tipo: 'ida' | 'vuelta'): Promise<QRResponse> => {
+  const generarQR = useCallback(async (boletoId: string, tipo?: 'ida' | 'vuelta'): Promise<QRResponse> => {
     try {
       const token = validarAutenticacion();
 
-      const url = tipo === 'ida' 
-        ? apiUrls.qr.generarIda(boletoId, userId!)
-        : apiUrls.qr.generarVuelta(boletoId, userId!);
+      // Nueva lógica: QR único
+      const url = apiUrls.qr.generar(boletoId, userId!);
 
       const response = await fetch(url, {
         method: 'POST',

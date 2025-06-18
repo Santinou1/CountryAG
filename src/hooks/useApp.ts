@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { User, Ticket } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { apiUrls } from '../configs/api';
 
 export const useApp = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [view, setView] = useState<'login' | 'client' | 'admin'>('login');
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -22,17 +24,50 @@ export const useApp = () => {
       }
     }
 
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('countryag-user');
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
-        setView(user.role);
-      } catch (error) {
-        console.error('Error loading user:', error);
-      }
+    // Persistencia de sesión: si hay token, validar con backend y rehidratar usuario
+    setIsAuthLoading(true);
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      fetch(apiUrls.users.me, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(async res => {
+          if (!res.ok) throw new Error('Token inválido o expirado');
+          const data = await res.json();
+          const user = {
+            id: data.id?.toString() || '',
+            name: `${data.nombre || ''} ${data.apellido || ''}`.trim(),
+            role: data.rol?.toLowerCase() || 'usuario',
+            nombre: data.nombre,
+            apellido: data.apellido
+          };
+          setCurrentUser(user);
+          setView(user.role);
+          localStorage.setItem('countryag-user', JSON.stringify(user));
+        })
+        .catch((err) => {
+          setCurrentUser(null);
+          setView('login');
+          localStorage.removeItem('countryag-user');
+          localStorage.removeItem('access_token');
+        })
+        .finally(() => setIsAuthLoading(false));
+    } else {
+      setCurrentUser(null);
+      setView('login');
+      setIsAuthLoading(false);
     }
+
+    // Escuchar cambios en localStorage para sincronizar usuario
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'countryag-user') {
+        const newUser = e.newValue ? JSON.parse(e.newValue) : null;
+        setCurrentUser(newUser);
+        setView(newUser ? newUser.role : 'login');
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Save tickets to localStorage whenever tickets change
@@ -62,6 +97,8 @@ export const useApp = () => {
     
     // Redirigir a login
     window.location.href = '/login';
+    // Forzar sincronización inmediata en otras pestañas
+    window.dispatchEvent(new StorageEvent('storage', { key: 'countryag-user', newValue: null }));
   };
 
   const purchaseTicket = (destination: string) => {
@@ -129,6 +166,7 @@ export const useApp = () => {
     useTicket,
     getUserTickets,
     getPendingTickets,
-    getConfirmedTickets
+    getConfirmedTickets,
+    isAuthLoading
   };
 };

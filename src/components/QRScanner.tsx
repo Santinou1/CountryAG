@@ -7,7 +7,7 @@ import jsQR from 'jsqr';
 interface QRScannerProps {
   isOpen: boolean;
   onClose: () => void;
-  onScan: (data: { boletoId: number; type: 'ida' | 'vuelta'; codigo: string }) => void;
+  onScan: (data: { boletoId: number; userId: number; codigo: string; timestamp: string }) => void;
 }
 
 export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan }) => {
@@ -21,7 +21,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
     if (!webcamRef.current || !isScanning) return;
 
     const imageSrc = webcamRef.current.getScreenshot();
-    if (!imageSrc) return;
+    if (!imageSrc) {
+      // No mostrar error si no se pudo capturar la imagen, simplemente retorna y reintenta
+      return;
+    }
 
     try {
       const canvas = document.createElement('canvas');
@@ -32,7 +35,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      if (!ctx) {
+        setError('No se pudo procesar la imagen.');
+        return;
+      }
 
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -41,16 +47,19 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
       if (code) {
         try {
           const data = JSON.parse(code.data);
-          if (data.boletoId && data.type && data.codigo) {
+          if (data.boletoId && data.userId && data.codigo && data.timestamp) {
+            console.log('QR válido parseado:', data);
             setIsScanning(false);
             onScan(data);
+          } else {
+            setError('QR inválido o incompleto');
           }
         } catch (e) {
           setError('QR inválido');
         }
       }
     } catch (e) {
-      console.error('Error al escanear:', e);
+      setError('Error al procesar la imagen.');
     }
   }, [isScanning, onScan]);
 
@@ -62,6 +71,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
     return () => clearInterval(interval);
   }, [isScanning, isManualMode, handleScan]);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      console.log('QRScanner montado y abierto');
+    }
+  }, [isOpen]);
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualCode.length === 4) {
@@ -69,8 +84,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
       // Podrías agregar un selector para elegir entre ida/vuelta
       onScan({
         boletoId: 0, // Esto se actualizará en el backend
-        type: 'ida',
-        codigo: manualCode
+        userId: 0, // Esto se actualizará en el backend
+        codigo: manualCode,
+        timestamp: new Date().toISOString()
       });
     } else {
       setError('El código debe tener 4 dígitos');

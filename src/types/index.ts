@@ -17,6 +17,11 @@ export interface Ticket {
     ida: boolean;
     vuelta: boolean;
   };
+  dni?: string;
+  createdAt?: string;
+  validoHasta?: string;
+  qrValidoHasta?: string;
+  estado?: string;
 }
 
 export interface Lote {

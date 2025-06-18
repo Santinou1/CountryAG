@@ -45,6 +45,10 @@ export interface Boleto {
   lote: string;
   ida: boolean;
   vuelta: boolean;
+  estado?: string;
+  createdAt?: string;
+  validoHasta?: string;
+  qrValidoHasta?: string;
 }
 
 export interface EscaneoQR {

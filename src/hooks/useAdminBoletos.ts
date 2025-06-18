@@ -59,7 +59,11 @@ export const useAdminBoletos = (): UseAdminBoletosReturn => {
       uses: {
         ida: Boolean(boleto.ida),
         vuelta: Boolean(boleto.vuelta)
-      }
+      },
+      dni: boleto.usuario?.dni || '',
+      createdAt: boleto.createdAt,
+      validoHasta: boleto.validoHasta,
+      qrValidoHasta: boleto.qrValidoHasta,
     };
 
     console.log('Boleto transformado:', transformed);

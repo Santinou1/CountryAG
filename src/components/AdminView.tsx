@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, CheckCircle, MapPin, User, ArrowRight, ArrowLeft, History, Loader2, Search, X, Camera } from 'lucide-react';
+import { LogOut, Clock, CheckCircle, MapPin, User, ArrowRight, ArrowLeft, History, Loader2, Search, X, Camera, AlertTriangle, BadgeCheck } from 'lucide-react';
 import { User as UserType, Ticket } from '../types';
 import { useAdminBoletos } from '../hooks/useAdminBoletos';
 import { apiUrls } from '../configs/api';
@@ -17,49 +17,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const { boletos, isLoading, error, refreshBoletos, fetchBoletosByTab } = useAdminBoletos();
+  const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [successModal, setSuccessModal] = useState<any | null>(null);
 
   // Efecto para cargar boletos cuando cambia la pestaña
   useEffect(() => {
-    console.log('Cambiando a pestaña:', activeTab);
     fetchBoletosByTab(activeTab);
   }, [activeTab, fetchBoletosByTab]);
-
-  // Debug de boletos cuando cambian
-  useEffect(() => {
-    console.log('Estado actual de los boletos:', boletos.map(boleto => ({
-      id: boleto.id,
-      status: boleto.status,
-      clientName: boleto.clientName,
-      uses: boleto.uses
-    })));
-  }, [boletos]);
 
   // Filtrar boletos según la búsqueda
   const filteredBoletos = boletos.filter(ticket => 
     searchQuery === '' || 
-    ticket.clientName.toLowerCase().includes(searchQuery.toLowerCase())
+    ticket.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (ticket.dni && ticket.dni.includes(searchQuery))
   );
 
-  // Debug de boletos filtrados por pestaña
-  useEffect(() => {
-    if (activeTab === 'pending') {
-      console.log('Boletos en pestaña pendientes:', filteredBoletos.map(b => ({ id: b.id, status: b.status })));
-    } else if (activeTab === 'confirmed') {
-      console.log('Boletos en pestaña confirmados:', filteredBoletos.map(b => ({ id: b.id, status: b.status })));
-    } else if (activeTab === 'history') {
-      console.log('Boletos en pestaña historial:', filteredBoletos.map(b => ({ id: b.id, status: b.status })));
-    }
-  }, [activeTab, filteredBoletos]);
-
   const handleTabChange = (tab: 'pending' | 'confirmed' | 'history') => {
-    console.log('Cambiando a pestaña:', tab);
     setActiveTab(tab);
     setSearchQuery(''); // Limpiar la búsqueda al cambiar de pestaña
   };
 
   const handleAprobarBoleto = async (ticketId: string) => {
     try {
-      console.log('Aprobando boleto:', ticketId);
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('No hay token de autenticación');
 
@@ -76,12 +55,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
         throw new Error(errorData.message || 'Error al aprobar el boleto');
       }
 
-      console.log('Boleto aprobado exitosamente');
       await refreshBoletos();
       // Cambiamos a la pestaña de confirmados después de aprobar
       setActiveTab('confirmed');
     } catch (err) {
-      console.error('Error al aprobar boleto:', err);
       alert(err instanceof Error ? err.message : 'Error al aprobar el boleto');
       await refreshBoletos();
     }
@@ -89,7 +66,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
 
   const handleRechazarBoleto = async (ticketId: string) => {
     try {
-      console.log('Rechazando boleto:', ticketId);
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('No hay token de autenticación');
 
@@ -106,110 +82,49 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
         throw new Error(errorData.message || 'Error al rechazar el boleto');
       }
 
-      console.log('Boleto rechazado exitosamente');
       await refreshBoletos();
       // Mantenemos en la pestaña actual después de rechazar
     } catch (err) {
-      console.error('Error al rechazar boleto:', err);
       alert(err instanceof Error ? err.message : 'Error al rechazar el boleto');
       await refreshBoletos();
     }
   };
 
-  const handleUseTicket = async (ticketId: string, type: 'ida' | 'vuelta') => {
+  const handleQRScan = async (qrData: { boletoId: number; userId: number; codigo: string; timestamp: string }) => {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('No hay token de autenticación');
 
-      // Actualizar el estado local primero
-      const updatedBoletos = boletos.map(ticket => {
-        if (ticket.id === ticketId) {
-          return {
-            ...ticket,
-            uses: {
-              ...ticket.uses,
-              [type]: true
-            },
-            status: type === 'ida' ? 'used-ida' : 
-                   (ticket.uses.ida && type === 'vuelta') ? 'completed' : 
-                   ticket.status
-          };
-        }
-        return ticket;
-      });
-
-      // Actualizar el estado local
-      refreshBoletos();
-
-      const url = type === 'ida' 
-        ? apiUrls.boletos.marcarIda(ticketId, user.id)
-        : apiUrls.boletos.marcarVuelta(ticketId, user.id);
-
+      // Nuevo endpoint único de escaneo
+      const url = apiUrls.qr.escanear(user.id);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al marcar el boleto');
-      }
-
-      // Actualizar los datos después de la llamada exitosa
-      await refreshBoletos();
-    } catch (err) {
-      console.error('Error al usar boleto:', err);
-      // Si hay error, refrescar para asegurar que el estado está sincronizado
-      await refreshBoletos();
-    }
-  };
-
-  const handleQRScan = async (data: { boletoId: number; type: 'ida' | 'vuelta'; codigo: string }) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('No hay token de autenticación');
-
-      // Usar directamente el endpoint de consumo según el tipo
-      const url = data.type === 'ida' 
-        ? apiUrls.boletos.consumirIda(data.codigo)
-        : apiUrls.boletos.consumirVuelta(data.codigo);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ qrData })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al procesar el boleto');
+        setErrorModal(errorData.message || 'Error al procesar el boleto');
+        return;
       }
 
-      alert('Boleto procesado exitosamente');
       setIsScannerOpen(false);
       await refreshBoletos();
+      const data = await response.json();
+      console.log('Respuesta del backend:', data);
+      setSuccessModal(data);
     } catch (err) {
-      console.error('Error al procesar boleto:', err);
-      alert(err instanceof Error ? err.message : 'Error al procesar el boleto');
+      setErrorModal(err instanceof Error ? err.message : 'Error al procesar el boleto');
     }
   };
 
   const getActionButtons = (ticket: Ticket) => {
-    console.log('Renderizando botones para boleto:', {
-      id: ticket.id,
-      status: ticket.status,
-      uses: ticket.uses,
-      clientName: ticket.clientName,
-      activeTab
-    });
-
     // Para boletos en la pestaña pendientes, mostrar botones de Confirmar/Rechazar
     if (activeTab === 'pending' && ticket.status === 'pendiente') {
-      console.log('Boleto pendiente, mostrando botones Confirmar/Rechazar');
       return (
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
@@ -239,92 +154,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
         </motion.div>
       );
     }
-
-    // Para boletos en la pestaña confirmados, mostrar botones de Usar Ida/Vuelta
-    if (activeTab === 'confirmed' && (ticket.status === 'aprobado' || ticket.status === 'used-ida')) {
-      console.log('Boleto aprobado o usado ida, mostrando botones Usar Ida/Vuelta');
-      return (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex gap-2 mt-3"
-        >
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleUseTicket(ticket.id, 'ida')}
-            disabled={ticket.uses.ida}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 relative overflow-hidden ${
-              ticket.uses.ida
-                ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            <motion.div
-              className="flex items-center gap-1"
-              animate={ticket.uses.ida ? { scale: [1, 1.1, 1] } : {}}
-              transition={{ duration: 0.5 }}
-            >
-              <ArrowRight className="w-3 h-3" />
-              {ticket.uses.ida ? 'Ida Usada' : 'Usar Ida'}
-              {ticket.uses.ida && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                >
-                  <CheckCircle className="w-3 h-3" />
-                </motion.div>
-              )}
-            </motion.div>
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleUseTicket(ticket.id, 'vuelta')}
-            disabled={ticket.uses.vuelta}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 relative overflow-hidden ${
-              ticket.uses.vuelta
-                ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                : 'bg-orange-600 text-white hover:bg-orange-700'
-            }`}
-          >
-            <motion.div
-              className="flex items-center gap-1"
-              animate={ticket.uses.vuelta ? { scale: [1, 1.1, 1] } : {}}
-              transition={{ duration: 0.5 }}
-            >
-              <ArrowLeft className="w-3 h-3" />
-              {ticket.uses.vuelta ? 'Vuelta Usada' : 'Usar Vuelta'}
-              {ticket.uses.vuelta && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                >
-                  <CheckCircle className="w-3 h-3" />
-                </motion.div>
-              )}
-            </motion.div>
-          </motion.button>
-        </motion.div>
-      );
-    }
-
-    console.log('Boleto sin botones:', { status: ticket.status, activeTab });
     return null;
   };
 
   const getTicketCard = (ticket: Ticket, showActions: boolean = true) => {
-    console.log('Renderizando tarjeta de boleto:', {
-      id: ticket.id,
-      status: ticket.status,
-      showActions,
-      clientName: ticket.clientName
-    });
-
     return (
       <motion.div
         key={ticket.id}
@@ -345,24 +178,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
             >
               <User className="w-4 h-4 text-blue-600" />
               <span className="font-medium text-gray-900">{ticket.clientName}</span>
+              {ticket.dni && (
+                <span className="ml-2 text-sm text-gray-500">DNI: {ticket.dni}</span>
+              )}
+              {ticket.createdAt && (
+                <span className="ml-2 text-xs text-gray-400">Creado: {new Date(ticket.createdAt).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</span>
+              )}
             </motion.div>
             <motion.div 
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              className="flex items-center gap-2 mb-1"
+              className="hidden"
             >
-              <MapPin className="w-4 h-4 text-green-600" />
-              <span className="text-gray-700">{ticket.destination}</span>
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="flex items-center gap-2 text-sm text-gray-500"
-            >
-              <Clock className="w-3 h-3" />
-              {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              {/* Ubicación eliminada */}
             </motion.div>
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -388,6 +217,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                  ticket.status === 'pendiente' ? 'Pendiente' : 'Pendiente'}
               </span>
             </motion.div>
+            {(ticket.validoHasta || ticket.qrValidoHasta) && (
+              <div className="mt-2 flex flex-col gap-1 text-xs text-gray-700 bg-gray-50 rounded-lg p-2 border border-gray-100">
+                {ticket.validoHasta && (
+                  <div><span className="font-semibold">Válido hasta:</span> {new Date(ticket.validoHasta).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</div>
+                )}
+                {ticket.qrValidoHasta && (
+                  <div><span className="font-semibold">QR válido hasta:</span> {new Date(ticket.qrValidoHasta).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         {showActions && getActionButtons(ticket)}
@@ -729,6 +568,88 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
         onClose={() => setIsScannerOpen(false)}
         onScan={handleQRScan}
       />
+
+      <AnimatePresence>
+        {errorModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+                onClick={() => setErrorModal(null)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+              <div className="flex flex-col items-center gap-3 mb-4">
+                <AlertTriangle className="w-10 h-10 text-yellow-500" />
+                <h2 className="text-xl font-bold text-gray-900">Error al escanear QR</h2>
+              </div>
+              <div className="text-base text-gray-700 mb-4">{errorModal}</div>
+              <button
+                onClick={() => setErrorModal(null)}
+                className="px-5 py-2 rounded-lg bg-yellow-500 text-white font-semibold hover:bg-yellow-600 transition shadow-md mt-2"
+              >
+                Volver a intentar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de éxito al escanear QR */}
+      <AnimatePresence>
+        {successModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+                onClick={() => setSuccessModal(null)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+              <div className="flex flex-col items-center gap-3 mb-4">
+                <BadgeCheck className="w-10 h-10 text-green-500" />
+                <h2 className="text-xl font-bold text-gray-900">¡Boleto escaneado correctamente!</h2>
+              </div>
+              <div className="text-base text-gray-700 mb-4">
+                <div className="flex flex-col items-center gap-2">
+                  {successModal.propietario && (
+                    <>
+                      <span className="font-semibold">DNI:</span> <span>{successModal.propietario.dni}</span>
+                      <span className="font-semibold">Propietario:</span> <span>{successModal.propietario.nombre} {successModal.propietario.apellido}</span>
+                    </>
+                  )}
+                  <span className="font-semibold">Código:</span> <span>{successModal.codigo}</span>
+                  <span className="font-semibold">ID Boleto:</span> <span>{successModal.boletoId}</span>
+                  {successModal.timestamp && (
+                    <span className="font-semibold">Escaneado:</span>
+                  )}
+                  {successModal.timestamp && (
+                    <span>{new Date(successModal.timestamp).toLocaleString('es-AR')}</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSuccessModal(null)}
+                className="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition shadow-md mt-2"
+              >
+                Escanear otro boleto
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
