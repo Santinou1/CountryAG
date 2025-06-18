@@ -1,7 +1,9 @@
 // Tipos para los enums de la base de datos
 export enum UserRol {
   USUARIO = 'usuario',
-  ADMIN = 'admin'
+  ADMIN = 'admin',
+  PROPIETARIO = 'propietario',
+  PROVEEDOR = 'proveedor'
 }
 
 export enum TipoEscaneo {
@@ -16,6 +18,13 @@ export interface CreatePersonaBody {
   email: string;
   contraseña: string;
   rol: UserRol;
+  dni: string;
+  celular: string;
+  area?: string;
+  lote?: string;
+  ocupacion?: string;
+  esPropietario?: boolean;
+  esProveedor?: boolean;
 }
 
 export interface UpdatePersonaBody {
