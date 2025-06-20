@@ -122,7 +122,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
               setError(null);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-              !isManualMode ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
+              !isManualMode ? 'bg-accent text-primary' : 'text-gray-600'
             }`}
           >
             <Camera className="w-5 h-5" />
@@ -134,7 +134,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
               setError(null);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-              isManualMode ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
+              isManualMode ? 'bg-accent text-primary' : 'text-gray-600'
             }`}
           >
             <KeyRound className="w-5 h-5" />
@@ -164,7 +164,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
                     setManualCode(e.target.value.replace(/[^0-9]/g, ''));
                     setError(null);
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                   placeholder="1234"
                 />
               </div>
@@ -179,7 +179,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
               )}
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full bg-primary text-white py-2 rounded-lg hover:bg-secondary transition-colors"
               >
                 Validar Código
               </button>
@@ -210,7 +210,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 1, repeat: Infinity }}
-                    className="w-48 h-48 border-2 border-blue-500 rounded-lg"
+                    className="w-48 h-48 border-2 border-primary rounded-lg"
                   />
                 </motion.div>
               )}

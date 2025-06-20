@@ -25,6 +25,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [isGeneratingQR, setIsGeneratingQR] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
 
   const {
     boletos,
@@ -119,11 +120,14 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       setIsGeneratingQR(boletoId);
       setQrTitle('Código QR de tu boleto');
       setQrData(null);
+      setQrError(null);
       await new Promise(resolve => setTimeout(resolve, 500));
       const qrResponse = await generarQR(boletoId, undefined);
       setQrData(qrResponse);
     } catch (err) {
-      // Aquí podrías mostrar un mensaje de error al usuario
+      const errorMessage = err instanceof Error ? err.message : 'Error al generar el QR';
+      setQrError(errorMessage);
+      console.log('Error al generar QR:', errorMessage);
     } finally {
       setIsGeneratingQR(null);
     }
@@ -134,7 +138,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100"
+      className="min-h-screen bg-gray-100"
     >
       {/* Header */}
       <motion.div
@@ -145,16 +149,16 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       >
         <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Mis Boletos</h1>
+            <h1 className="text-xl font-bold text-primary">Mis Boletos</h1>
             {isLoadingUser ? (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-secondary">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Cargando datos...
               </div>
             ) : userError ? (
               <p className="text-sm text-red-600">{userError}</p>
             ) : (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-dark-gray">
                 Hola, {user.nombre} {user.apellido}
               </p>
             )}
@@ -163,7 +167,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             whileHover={{ scale: 1.1, rotate: 90 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleLogout}
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-100"
+            className="p-2 text-gray-500 hover:text-secondary transition-colors rounded-full hover:bg-gray-100"
           >
             <LogOut className="w-5 h-5" />
           </motion.button>
@@ -171,14 +175,21 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
       </motion.div>
 
       <div className="max-w-md mx-auto p-4 space-y-6">
+        {/* Banner */}
+        <img 
+            src="/ENPUNTO_LARGO_Mesa de trabajo 1.png" 
+            alt="En Punto Banner"
+            className="w-full rounded-lg shadow-md mb-4" 
+        />
+
         {/* Info del boleto */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-green-900 mb-4">
+        <div className="bg-blue-50 border border-accent rounded-xl p-4 text-secondary mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <span className="font-semibold">Boleto General</span>
+            <CheckCircle className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-primary">Boleto General</span>
           </div>
           <div className="text-sm mb-1">{BOLETO_DESCRIPCION}</div>
-          <div className="text-sm font-bold">Precio: ${BOLETO_PRECIO.toLocaleString('es-AR')}</div>
+          <div className="text-sm font-bold text-primary">Precio: ${BOLETO_PRECIO.toLocaleString('es-AR')}</div>
         </div>
 
         {/* Botón para adquirir boleto */}
@@ -186,7 +197,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowConfirmModal(true)}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg text-lg font-semibold shadow-md hover:bg-green-700 transition-all duration-300"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-lg text-lg font-semibold shadow-md hover:bg-secondary transition-all duration-300"
         >
           <PlusCircle className="w-6 h-6" />
           Adquirir Boleto
@@ -215,19 +226,19 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                   ×
                 </button>
                 <div className="flex flex-col items-center gap-3 mb-4">
-                  <CheckCircle className="w-10 h-10 text-green-600" />
-                  <h2 className="text-xl font-bold text-gray-900">Confirmar compra de boleto</h2>
+                  <CheckCircle className="w-10 h-10 text-primary" />
+                  <h2 className="text-xl font-bold text-primary">Confirmar compra de boleto</h2>
                 </div>
                 <div className="flex flex-col gap-2 mb-4">
-                  <div className="flex items-center justify-center gap-2 text-lg font-semibold text-green-700">
+                  <div className="flex items-center justify-center gap-2 text-lg font-semibold text-secondary">
                     <span>Precio:</span>
                     <span>${BOLETO_PRECIO.toLocaleString('es-AR')}</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2 text-blue-700">
+                  <div className="flex items-center justify-center gap-2 text-secondary">
                     <Clock className="w-5 h-5" />
                     <span>Duración: 24 horas desde el primer escaneo</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2 text-purple-700">
+                  <div className="flex items-center justify-center gap-2 text-secondary">
                     <Infinity className="w-5 h-5" />
                     <span>Usos ilimitados</span>
                   </div>
@@ -242,7 +253,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                   </button>
                   <button
                     onClick={handlePurchase}
-                    className="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition shadow-md"
+                    className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md"
                     disabled={isPurchasing}
                   >
                     {isPurchasing ? 'Adquiriendo...' : 'Confirmar'}
@@ -255,18 +266,18 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
 
         {/* Lista de boletos */}
         <div className="space-y-4 mt-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Tus Boletos</h2>
+          <h2 className="text-lg font-semibold text-primary mb-2">Tus Boletos</h2>
           {isLoading ? (
             <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100">
-              <Loader2 className="w-8 h-8 text-green-600 animate-spin mx-auto mb-3" />
-              <p className="text-gray-600">Cargando boletos...</p>
+              <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
+              <p className="text-secondary">Cargando boletos...</p>
             </div>
           ) : boletosError ? (
             <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-red-100">
               <p className="text-red-600 mb-2">Error al cargar los boletos</p>
               <button
                 onClick={() => refreshBoletos()}
-                className="text-sm text-green-600 hover:text-green-700"
+                className="text-sm text-primary hover:text-secondary"
               >
                 Intentar de nuevo
               </button>
@@ -292,13 +303,13 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-gray-900">Boleto General</span>
+                          <span className="font-medium text-primary">Boleto General</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-dark-gray">
                           <span>Adquirido el {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {(ticket.validoHasta || ticket.qrValidoHasta) && (
-                          <div className="mt-2 flex flex-col gap-1 text-xs text-gray-700 bg-gray-50 rounded-lg p-2 border border-gray-100">
+                          <div className="mt-2 flex flex-col gap-1 text-xs text-secondary bg-gray-50 rounded-lg p-2 border border-gray-100">
                             {ticket.validoHasta && (
                               <div><span className="font-semibold">Válido hasta:</span> {new Date(ticket.validoHasta).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</div>
                             )}
@@ -311,7 +322,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                       {ticket.estado && (
                         <span
                           className={`px-2 py-1 text-xs rounded-full font-semibold
-                            ${ticket.estado === 'aprobado' ? 'bg-green-100 text-green-800' : ''}
+                            ${ticket.estado === 'aprobado' ? 'bg-blue-100 text-primary' : ''}
                             ${ticket.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : ''}
                             ${ticket.estado === 'rechazado' ? 'bg-red-100 text-red-800' : ''}
                           `}
@@ -325,7 +336,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => handleGenerarQR(ticket.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-md w-fit"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition-all duration-300 shadow-md w-fit"
                         disabled={isGeneratingQR !== null}
                       >
                         <QrCode className="w-5 h-5" />
@@ -349,6 +360,48 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             qrCode={qrData?.qrCode || ''}
             codigo={qrData?.codigo || ''}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Modal de error QR */}
+      <AnimatePresence>
+        {qrError && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+                onClick={() => setQrError(null)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+              <div className="flex flex-col items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-dark-gray">No se puede generar el QR</h2>
+              </div>
+              <div className="text-base text-secondary mb-6">
+                {qrError.includes('no está aprobado') 
+                  ? 'Tu boleto aún está pendiente de aprobación. Por favor, espera a que sea confirmado por el administrador.'
+                  : qrError
+                }
+              </div>
+              <button
+                onClick={() => setQrError(null)}
+                className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md"
+              >
+                Entendido
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

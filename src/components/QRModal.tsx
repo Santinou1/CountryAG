@@ -32,12 +32,12 @@ export const QRModal: React.FC<QRModalProps> = ({ isOpen, onClose, title, qrCode
                     onClick={e => e.stopPropagation()}
                 >
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                        <h3 className="text-lg font-semibold text-primary">{title}</h3>
                         <motion.button
                             whileHover={{ scale: 1.1, rotate: 90 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+                            className="text-gray-500 hover:text-secondary transition-colors p-1 rounded-full hover:bg-gray-100"
                         >
                             <X className="w-5 h-5" />
                         </motion.button>
@@ -57,8 +57,8 @@ export const QRModal: React.FC<QRModalProps> = ({ isOpen, onClose, title, qrCode
                             transition={{ delay: 0.3 }}
                             className="flex flex-col items-center gap-2"
                         >
-                            <span className="text-sm text-gray-500">Código de verificación:</span>
-                            <span className="text-2xl font-bold text-green-600 tracking-wider">
+                            <span className="text-sm text-secondary">Código de verificación:</span>
+                            <span className="text-2xl font-bold text-primary tracking-wider">
                                 {codigo}
                             </span>
                         </motion.div>

@@ -136,7 +136,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
             whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleAprobarBoleto(ticket.id)}
-            className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 bg-green-600 text-white hover:bg-green-700"
+            className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 bg-primary text-white hover:bg-secondary"
           >
             <CheckCircle className="w-4 h-4" />
             Confirmar
@@ -176,8 +176,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
               transition={{ duration: 0.3 }}
               className="flex items-center gap-2 mb-1"
             >
-              <User className="w-4 h-4 text-blue-600" />
-              <span className="font-medium text-gray-900">{ticket.clientName}</span>
+              <User className="w-4 h-4 text-primary" />
+              <span className="font-medium text-dark-gray">{ticket.clientName}</span>
               {ticket.dni && (
                 <span className="ml-2 text-sm text-gray-500">DNI: {ticket.dni}</span>
               )}
@@ -203,9 +203,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                 ticket.status === 'completed' 
                   ? 'bg-gray-100 text-gray-800' 
                   : ticket.status === 'used-ida'
-                  ? 'bg-blue-100 text-blue-800'
+                  ? 'bg-accent text-primary'
                   : ticket.status === 'aprobado'
-                  ? 'bg-green-100 text-green-800'
+                  ? 'bg-blue-100 text-primary'
                   : ticket.status === 'rechazado'
                   ? 'bg-red-100 text-red-800'
                   : 'bg-yellow-100 text-yellow-800'
@@ -239,7 +239,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100"
+      className="min-h-screen bg-gradient-to-b from-gray-50 to-accent"
     >
       {/* Header con efecto glassmorphism */}
       <motion.div 
@@ -254,8 +254,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <h1 className="text-xl font-bold text-gray-900">Panel Chofer</h1>
-            <p className="text-sm text-gray-600">
+            <h1 className="text-xl font-bold text-primary">Panel Chofer</h1>
+            <p className="text-sm text-secondary">
               Hola, {user?.nombre} {user?.apellido}
             </p>
           </motion.div>
@@ -264,7 +264,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setIsScannerOpen(true)}
-              className="p-2 text-blue-600 hover:text-blue-700 transition-colors rounded-full hover:bg-blue-50"
+              className="p-2 text-primary hover:text-secondary transition-colors rounded-full hover:bg-blue-50"
             >
               <Camera className="w-5 h-5" />
             </motion.button>
@@ -300,8 +300,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                 onClick={() => handleTabChange(tab as typeof activeTab)}
                 className={`flex-1 py-4 px-4 text-center font-medium transition-all duration-300 relative ${
                   activeTab === tab
-                    ? 'text-green-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'text-primary'
+                    : 'text-gray-500 hover:text-secondary'
                 }`}
               >
                 {tab === 'pending' && 'Pendientes (' + filteredBoletos.length + ')'}
@@ -310,7 +310,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                 {activeTab === tab && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
                 )}
@@ -343,7 +343,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por nombre del cliente..."
-              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition-all duration-300"
+              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all duration-300"
             />
             <AnimatePresence>
               {searchQuery && (
@@ -378,9 +378,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 >
-                  <Loader2 className="w-8 h-8 text-green-600" />
+                  <Loader2 className="w-8 h-8 text-primary" />
                 </motion.div>
-                <span className="ml-2 text-gray-600">Cargando boletos...</span>
+                <span className="ml-2 text-secondary">Cargando boletos...</span>
               </motion.div>
             ) : error ? (
               <motion.div
@@ -410,10 +410,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
               >
                 {activeTab === 'pending' && (
                   <motion.div>
-                    <h2 className="text-lg font-semibold text-gray-900">
+                    <h2 className="text-lg font-semibold text-primary">
                       Boletos Pendientes
                       {searchQuery && (
-                        <motion.span className="text-sm font-normal text-gray-500 ml-2">
+                        <motion.span className="text-sm font-normal text-secondary ml-2">
                           ({filteredBoletos.length} resultados)
                         </motion.span>
                       )}
@@ -460,10 +460,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
 
                 {activeTab === 'confirmed' && (
                   <motion.div>
-                    <h2 className="text-lg font-semibold text-gray-900">
+                    <h2 className="text-lg font-semibold text-primary">
                       Boletos Confirmados
                       {searchQuery && (
-                        <motion.span className="text-sm font-normal text-gray-500 ml-2">
+                        <motion.span className="text-sm font-normal text-secondary ml-2">
                           ({filteredBoletos.length} resultados)
                         </motion.span>
                       )}
@@ -510,10 +510,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
 
                 {activeTab === 'history' && (
                   <motion.div>
-                    <h2 className="text-lg font-semibold text-gray-900">
+                    <h2 className="text-lg font-semibold text-primary">
                       Historial de Boletos
                       {searchQuery && (
-                        <motion.span className="text-sm font-normal text-gray-500 ml-2">
+                        <motion.span className="text-sm font-normal text-secondary ml-2">
                           ({filteredBoletos.length} resultados)
                         </motion.span>
                       )}
@@ -587,9 +587,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
               </button>
               <div className="flex flex-col items-center gap-3 mb-4">
                 <AlertTriangle className="w-10 h-10 text-yellow-500" />
-                <h2 className="text-xl font-bold text-gray-900">Error al escanear QR</h2>
+                <h2 className="text-xl font-bold text-dark-gray">Error al escanear QR</h2>
               </div>
-              <div className="text-base text-gray-700 mb-4">{errorModal}</div>
+              <div className="text-base text-secondary mb-4">{errorModal}</div>
               <button
                 onClick={() => setErrorModal(null)}
                 className="px-5 py-2 rounded-lg bg-yellow-500 text-white font-semibold hover:bg-yellow-600 transition shadow-md mt-2"
@@ -619,10 +619,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                 ×
               </button>
               <div className="flex flex-col items-center gap-3 mb-4">
-                <BadgeCheck className="w-10 h-10 text-green-500" />
-                <h2 className="text-xl font-bold text-gray-900">¡Boleto escaneado correctamente!</h2>
+                <BadgeCheck className="w-10 h-10 text-primary" />
+                <h2 className="text-xl font-bold text-primary">¡Boleto escaneado correctamente!</h2>
               </div>
-              <div className="text-base text-gray-700 mb-4">
+              <div className="text-base text-secondary mb-4">
                 <div className="flex flex-col items-center gap-2">
                   {successModal.propietario && (
                     <>
@@ -642,7 +642,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
               </div>
               <button
                 onClick={() => setSuccessModal(null)}
-                className="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition shadow-md mt-2"
+                className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md mt-2"
               >
                 Escanear otro boleto
               </button>
