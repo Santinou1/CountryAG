@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { LogOut, Loader2, QrCode, PlusCircle, CheckCircle, Clock, Infinity } from 'lucide-react';
 import { User } from '../types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiUrls } from '../configs/api';
 import { useBoletos } from '../hooks/useBoletos';
 import { QRModal } from './QRModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PaymentSuccessModal } from './PaymentSuccessModal';
 
 interface ClientViewProps {
   user: User;
 }
 
-const BOLETO_PRECIO = 5000; // Precio fijo
+const BOLETO_PRECIO = 7000; // Precio fijo
 const BOLETO_DESCRIPCION = 'Válido por 24 horas desde el primer escaneo. Usos ilimitados.';
 
 export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => {
@@ -26,6 +27,8 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const {
     boletos,
@@ -57,6 +60,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
         id: data.id.toString(),
         nombre: data.nombre,
         apellido: data.apellido,
+        email: data.email,
         rol: data.rol.toLowerCase()
       };
       setUser(updatedUser);
@@ -79,7 +83,18 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     }
   }, [initialUser, navigate]);
 
-  useEffect(() => { fetchUserInfo(); }, [fetchUserInfo]);
+  useEffect(() => {
+    fetchUserInfo();
+  }, [fetchUserInfo]);
+
+  useEffect(() => {
+    if (searchParams.get('payment_status') === 'success') {
+      setShowSuccessModal(true);
+      refreshBoletos();
+      // Limpiar el parámetro de la URL
+      navigate('/home', { replace: true });
+    }
+  }, [searchParams, navigate, refreshBoletos]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -96,14 +111,39 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     setIsPurchasing(true);
     setPurchaseError(null);
     try {
-      await comprarBoleto('GENERAL');
-      await refreshBoletos();
-      setShowConfirmModal(false);
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No estás autenticado');
+
+      const response = await fetch(apiUrls.mercadopago.createPreference, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          payer: {
+            email: user.email,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('No se pudo generar el link de pago.');
+      }
+
+      const preference = await response.json();
+      
+      if (preference.init_point) {
+        window.location.href = preference.init_point;
+      } else {
+        throw new Error('No se recibió un link de pago válido.');
+      }
+      
     } catch (err) {
-      setPurchaseError(err instanceof Error ? err.message : 'Error al adquirir el boleto');
-    } finally {
-      setIsPurchasing(false);
-    }
+      setPurchaseError(err instanceof Error ? err.message : 'Error al iniciar la compra');
+      setIsPurchasing(false); // Detener el loading solo si hay error
+    } 
+    // No detenemos el loading si todo va bien, porque la página redirigirá.
   };
 
   const handleLogout = useCallback(() => {
@@ -256,13 +296,19 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                     className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md"
                     disabled={isPurchasing}
                   >
-                    {isPurchasing ? 'Adquiriendo...' : 'Confirmar'}
+                    {isPurchasing ? 'Redirigiendo...' : 'Confirmar y Pagar'}
                   </button>
                 </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Modal de pago exitoso */}
+        <PaymentSuccessModal 
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+        />
 
         {/* Lista de boletos */}
         <div className="space-y-4 mt-6">

@@ -30,4 +30,7 @@ export const apiUrls = {
     escanear: (boletoId: string) => `${baseUrl}/api/qr/escanear/${boletoId}`,
     historial: (boletoId: string) => `${baseUrl}/api/qr/historial/${boletoId}`,
   },
+  mercadopago: {
+    createPreference: `${baseUrl}/api/mercadopago/create-preference`,
+  },
 }; 
