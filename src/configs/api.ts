@@ -23,6 +23,8 @@ export const apiUrls = {
       `${baseUrl}/api/boletos/${boletoId}/aprobar/${userId}`,
     rechazar: (boletoId: string, userId: string) =>
       `${baseUrl}/api/boletos/${boletoId}/rechazar/${userId}`,
+    consumoManual: (boletoId: string) => 
+      `${baseUrl}/api/boletos/consumo-manual/${boletoId}`,
   },
   qr: {
     generar: (boletoId: string, userId: string) =>

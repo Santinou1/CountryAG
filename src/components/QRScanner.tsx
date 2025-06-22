@@ -73,7 +73,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
 
   React.useEffect(() => {
     if (isOpen) {
-      console.log('QRScanner montado y abierto');
+      console.log('QRScanner abierto. Reiniciando estado.');
+      setIsScanning(true);
+      setError(null);
+      setIsManualMode(false);
+      setManualCode('');
     }
   }, [isOpen]);
 

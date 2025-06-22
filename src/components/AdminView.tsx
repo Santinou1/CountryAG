@@ -19,18 +19,37 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
   const { boletos, isLoading, error, refreshBoletos, fetchBoletosByTab } = useAdminBoletos();
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [successModal, setSuccessModal] = useState<any | null>(null);
+  const [manualSuccessModal, setManualSuccessModal] = useState<string | null>(null);
 
   // Efecto para cargar boletos cuando cambia la pestaña
   useEffect(() => {
     fetchBoletosByTab(activeTab);
   }, [activeTab, fetchBoletosByTab]);
 
-  // Filtrar boletos según la búsqueda
-  const filteredBoletos = boletos.filter(ticket => 
-    searchQuery === '' || 
-    ticket.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (ticket.dni && ticket.dni.includes(searchQuery))
-  );
+  // Filtrar boletos según la pestaña y la búsqueda
+  const filteredBoletos = boletos
+    .filter(ticket => {
+      // En la pestaña de 'confirmados', solo mostrar boletos válidos para el día de hoy.
+      if (activeTab === 'confirmed') {
+        // La regla principal: si un boleto tiene fecha de expiración, esta tiene prioridad.
+        // Solo mostramos el boleto si la fecha de expiración aún no ha pasado.
+        if (ticket.validoHasta) {
+          return new Date() < new Date(ticket.validoHasta);
+        }
+
+        // Si el boleto NO tiene fecha de expiración, significa que es nuevo y nunca se ha usado.
+        // En este caso, siempre lo mostramos en la lista de confirmados.
+        return true;
+      }
+      // Para las otras pestañas ('pending', 'history'), no aplicamos este filtro de fecha.
+      return true;
+    })
+    .filter(ticket => 
+      // Luego, aplicamos el filtro de búsqueda por nombre o DNI.
+      searchQuery === '' || 
+      ticket.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (ticket.dni && ticket.dni.includes(searchQuery))
+    );
 
   const handleTabChange = (tab: 'pending' | 'confirmed' | 'history') => {
     setActiveTab(tab);
@@ -122,7 +141,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleConsumoManual = async (ticketId: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) throw new Error('No hay token de autenticación');
+
+      const response = await fetch(apiUrls.boletos.consumoManual(ticketId), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error en el consumo manual');
+      }
+      
+      const updatedBoleto = await response.json();
+      setManualSuccessModal(`¡Boleto #${updatedBoleto.id} consumido! Usos registrados: ${updatedBoleto.contador}.`);
+      await refreshBoletos();
+
+    } catch (err) {
+      setErrorModal(err instanceof Error ? err.message : 'Error al consumir el boleto manualmente.');
+    }
+  };
+
   const getActionButtons = (ticket: Ticket) => {
+    console.log(`[Depuración] Boleto ID: ${ticket.id}, Tab: ${activeTab}, Status: ${ticket.status}`);
+
     // Para boletos en la pestaña pendientes, mostrar botones de Confirmar/Rechazar
     if (activeTab === 'pending' && ticket.status === 'pendiente') {
       return (
@@ -154,8 +201,55 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
         </motion.div>
       );
     }
+    // Para boletos en la pestaña confirmados, no mostramos nada aquí porque 
+    // el botón se renderiza directamente en getTicketCard
+    if (activeTab === 'confirmed' && ticket.status === 'aprobado') {
+      return null;
+    }
     return null;
   };
+
+  const getTicketTimeline = (ticket: Ticket) => {
+    const events = [];
+
+    if (ticket.fechaCreacion) {
+      events.push({
+        label: 'Comprado',
+        date: new Date(ticket.fechaCreacion),
+      });
+    }
+
+    if (ticket.primerUso) {
+      events.push({
+        label: 'Primer Uso',
+        date: new Date(ticket.primerUso),
+      });
+    }
+
+    if (ticket.validoHasta) {
+      events.push({
+        label: 'Expira',
+        date: new Date(ticket.validoHasta),
+      });
+    }
+
+    // sort events by date
+    events.sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    if (events.length === 0) return null;
+
+    return (
+      <ol className="relative border-l border-gray-200 dark:border-gray-700 mt-3">
+        {events.map((event, index) => (
+          <li key={index} className="mb-2 ml-4">
+            <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-900 dark:bg-gray-700"></div>
+            <time className="mb-1 text-xs font-normal leading-none text-gray-400 dark:text-gray-500">{new Date(event.date).toLocaleString()}</time>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{event.label}</h3>
+          </li>
+        ))}
+      </ol>
+    )
+  }
 
   const getTicketCard = (ticket: Ticket, showActions: boolean = true) => {
     return (
@@ -227,9 +321,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                 )}
               </div>
             )}
+            <p className="text-gray-400 text-xs">ID de Pago: {ticket.paymentId || 'N/A'}</p>
+            {getTicketTimeline(ticket)}
+            {showActions && getActionButtons(ticket)}
+
+            {activeTab === 'confirmed' && ticket.status === 'aprobado' && (
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => handleConsumoManual(ticket.id)}
+                  className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition"
+                >
+                  Consumo Manual
+                </button>
+              </div>
+            )}
           </div>
         </div>
-        {showActions && getActionButtons(ticket)}
       </motion.div>
     );
   };
@@ -645,6 +752,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onLogout }) => {
                 className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md mt-2"
               >
                 Escanear otro boleto
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {manualSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+                onClick={() => setManualSuccessModal(null)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+              <div className="flex flex-col items-center gap-3 mb-4">
+                <BadgeCheck className="w-10 h-10 text-primary" />
+                <h2 className="text-xl font-bold text-primary">Consumo Manual Registrado</h2>
+              </div>
+              <div className="text-base text-secondary mb-4">{manualSuccessModal}</div>
+              <button
+                onClick={() => setManualSuccessModal(null)}
+                className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md mt-2"
+              >
+                Entendido
               </button>
             </div>
           </motion.div>

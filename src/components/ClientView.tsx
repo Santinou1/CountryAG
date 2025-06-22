@@ -142,7 +142,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     } catch (err) {
       setPurchaseError(err instanceof Error ? err.message : 'Error al iniciar la compra');
       setIsPurchasing(false); // Detener el loading solo si hay error
-    } 
+    }
     // No detenemos el loading si todo va bien, porque la página redirigirá.
   };
 
