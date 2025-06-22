@@ -156,23 +156,6 @@ export const LoginForm = () => {
               ¿No tienes cuenta? Regístrate aquí
             </Link>
           </div>
-
-          {/* Credenciales de prueba */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 text-center">
-              Credenciales de Prueba
-            </h3>
-            <div className="space-y-2 text-xs text-gray-600">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Admin:</span>
-                <span>admin@admin.com / 123456san</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Usuario:</span>
-                <span>user@user.com / 123456san</span>
-              </div>
-            </div>
-          </div>
         </form>
       </div>
     </div>
