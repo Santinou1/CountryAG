@@ -7,10 +7,9 @@ interface QRModalProps {
     onClose: () => void;
     title: string;
     qrCode: string;
-    codigo: string;
 }
 
-export const QRModal: React.FC<QRModalProps> = ({ isOpen, onClose, title, qrCode, codigo }) => {
+export const QRModal: React.FC<QRModalProps> = ({ isOpen, onClose, title, qrCode }) => {
     if (!isOpen) return null;
 
     return (
@@ -51,17 +50,6 @@ export const QRModal: React.FC<QRModalProps> = ({ isOpen, onClose, title, qrCode
                             alt="Código QR" 
                             className="w-64 h-64 object-contain"
                         />
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="flex flex-col items-center gap-2"
-                        >
-                            <span className="text-sm text-secondary">Código de verificación:</span>
-                            <span className="text-2xl font-bold text-primary tracking-wider">
-                                {codigo}
-                            </span>
-                        </motion.div>
                     </div>
                     <motion.p 
                         initial={{ opacity: 0, y: 10 }}
@@ -69,7 +57,7 @@ export const QRModal: React.FC<QRModalProps> = ({ isOpen, onClose, title, qrCode
                         transition={{ delay: 0.4 }}
                         className="text-center text-sm text-gray-500 mt-4"
                     >
-                        Muestra este código QR y el código de verificación al chofer para validar tu boleto
+                        Muestra este código QR al chofer para validar tu boleto
                     </motion.p>
                 </motion.div>
             </motion.div>
