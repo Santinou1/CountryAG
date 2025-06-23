@@ -98,12 +98,6 @@ export const LoginForm = () => {
             alt="En Punto Banner"
             className="w-full max-w-xs mb-4"
           />
-          <h2 className="text-center text-3xl font-extrabold text-primary">
-            EnPunto
-          </h2>
-          <p className="mt-2 text-center text-sm text-secondary">
-            Viaja seguro y cómodo con nosotros
-          </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
