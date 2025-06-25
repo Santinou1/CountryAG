@@ -1,4 +1,8 @@
 export { CreateUserModal } from './CreateUserModal';
 export { UsersTab } from './UsersTab';
 export { BoletosTab } from './BoletosTab';
-export { SearchBar } from './SearchBar'; 
+export { SearchBar } from './SearchBar';
+export { MetricasTab } from './MetricasTab';
+export { MetricasGenerales } from './MetricasGenerales';
+export { MetricasPorEstado } from './MetricasPorEstado';
+export { MetricasUso } from './MetricasUso'; 

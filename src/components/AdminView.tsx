@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Users, Ticket, Plus, Loader2, AlertCircle } from 'lucide-react';
+import { LogOut, Users, Ticket, Plus, Loader2, AlertCircle, BarChart3 } from 'lucide-react';
 import { User } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminBoletos } from '../hooks/useAdminBoletos';
-import { CreateUserModal, UsersTab, BoletosTab } from './admin';
+import { CreateUserModal, UsersTab, BoletosTab, MetricasTab } from './admin';
 
 interface AdminViewProps {
   user: User;
 }
 
-type TabType = 'users' | 'boletos';
+type TabType = 'users' | 'boletos' | 'metricas';
 
 export const AdminView: React.FC<AdminViewProps> = ({ user: initialUser }) => {
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user: initialUser }) => {
 
   // Si no es admin, mostrar solo la pestaña de boletos
   useEffect(() => {
-    if (!isAdmin && activeTab === 'users') {
+    if (!isAdmin && (activeTab === 'users' || activeTab === 'metricas')) {
       setActiveTab('boletos');
     }
   }, [isAdmin, activeTab]);
@@ -137,6 +137,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ user: initialUser }) => {
                   <Ticket className="w-4 h-4" />
                   Boletos ({boletos.length})
                 </button>
+                <button
+                  onClick={() => setActiveTab('metricas')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                    activeTab === 'metricas'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Métricas
+                </button>
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium bg-white text-blue-600 shadow-sm">
@@ -191,6 +202,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ user: initialUser }) => {
                   onRefresh={refreshUsers}
                 />
               )}
+            </motion.div>
+          ) : isAdmin && activeTab === 'metricas' ? (
+            <motion.div
+              key="metricas"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <MetricasTab />
             </motion.div>
           ) : (
             <motion.div
