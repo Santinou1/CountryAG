@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { User, Mail, Shield, Edit, Trash2, MoreVertical, CheckCircle, XCircle, CreditCard, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SearchBar } from './SearchBar';
+import { ConfirmModal } from './ConfirmModal';
+import { RoleSelectorModal } from './RoleSelectorModal';
 import { filterUsers } from '../../utils/searchUtils';
 
 interface AdminUser {
@@ -31,6 +33,11 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados para los modales
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   // Filtrar usuarios basado en el término de búsqueda
   const filteredUsers = useMemo(() => {
@@ -38,13 +45,11 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   }, [users, searchTerm]);
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
-      return;
-    }
-
     setIsLoading(userId);
     try {
       await onDeleteUser(userId);
+      setShowDeleteModal(false);
+      setSelectedUser(null);
     } catch (error) {
       console.error('Error al eliminar usuario:', error);
     } finally {
@@ -52,16 +57,29 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     }
   };
 
-  const handleToggleRole = async (userId: string, currentRole: 'admin' | 'usuario' | 'chofer') => {
-    const newRole = currentRole === 'admin' ? 'usuario' : currentRole === 'usuario' ? 'chofer' : 'admin';
-    setIsLoading(userId);
+  const handleUpdateRole = async (newRole: 'admin' | 'usuario' | 'chofer') => {
+    if (!selectedUser) return;
+    
+    setIsLoading(selectedUser.id);
     try {
-      await onUpdateUser(userId, { rol: newRole });
+      await onUpdateUser(selectedUser.id, { rol: newRole });
+      setShowRoleModal(false);
+      setSelectedUser(null);
     } catch (error) {
       console.error('Error al actualizar rol:', error);
     } finally {
       setIsLoading(null);
     }
+  };
+
+  const openDeleteModal = (user: AdminUser) => {
+    setSelectedUser(user);
+    setShowDeleteModal(true);
+  };
+
+  const openRoleModal = (user: AdminUser) => {
+    setSelectedUser(user);
+    setShowRoleModal(true);
   };
 
   const getRoleColor = (role: string) => {
@@ -75,6 +93,12 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getUserDisplayName = (user: AdminUser) => {
+    return user.nombre && user.apellido 
+      ? `${user.nombre} ${user.apellido}`
+      : user.email;
   };
 
   return (
@@ -119,10 +143,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     </div>
                     <div>
                       <h3 className="font-medium text-gray-900">
-                        {user.nombre && user.apellido 
-                          ? `${user.nombre} ${user.apellido}`
-                          : user.email
-                        }
+                        {getUserDisplayName(user)}
                       </h3>
                       <div className="flex items-center gap-2 mt-1">
                         <Mail className="w-3 h-3 text-gray-400" />
@@ -167,16 +188,16 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                       <div className="space-y-3">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleToggleRole(user.id, user.rol)}
+                            onClick={() => openRoleModal(user)}
                             disabled={isLoading === user.id}
                             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors"
                           >
                             <Shield className="w-4 h-4" />
-                            {user.rol === 'admin' ? 'Quitar Admin' : user.rol === 'chofer' ? 'Hacer Usuario' : 'Hacer Chofer'}
+                            Cambiar Rol
                           </button>
                           
                           <button
-                            onClick={() => handleDeleteUser(user.id)}
+                            onClick={() => openDeleteModal(user)}
                             disabled={isLoading === user.id}
                             className="flex items-center justify-center gap-2 px-3 py-2 text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors"
                           >
@@ -193,6 +214,35 @@ export const UsersTab: React.FC<UsersTabProps> = ({
           ))}
         </div>
       )}
+
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedUser(null);
+        }}
+        onConfirm={() => selectedUser && handleDeleteUser(selectedUser.id)}
+        title="Eliminar Usuario"
+        message={`¿Estás seguro de que quieres eliminar a ${selectedUser ? getUserDisplayName(selectedUser) : 'este usuario'}? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+        isLoading={isLoading === selectedUser?.id}
+      />
+
+      {/* Modal de selección de rol */}
+      <RoleSelectorModal
+        isOpen={showRoleModal}
+        onClose={() => {
+          setShowRoleModal(false);
+          setSelectedUser(null);
+        }}
+        onConfirm={handleUpdateRole}
+        currentRole={selectedUser?.rol || 'usuario'}
+        userName={selectedUser ? getUserDisplayName(selectedUser) : ''}
+        isLoading={isLoading === selectedUser?.id}
+      />
     </div>
   );
 }; 
