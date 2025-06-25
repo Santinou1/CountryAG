@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { LogOut, Loader2, QrCode, PlusCircle, CheckCircle, Clock, Infinity } from 'lucide-react';
+import { LogOut, Loader2, QrCode, PlusCircle, CheckCircle, Clock, Infinity, RefreshCw } from 'lucide-react';
 import { User } from '../types';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiUrls } from '../configs/api';
@@ -312,7 +312,19 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
 
         {/* Lista de boletos */}
         <div className="space-y-4 mt-6">
-          <h2 className="text-lg font-semibold text-primary mb-2">Tus Boletos</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-primary">Tus Boletos</h2>
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 180 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => refreshBoletos()}
+              disabled={isLoading}
+              className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Actualizar boletos"
+            >
+              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+            </motion.button>
+          </div>
           {isLoading ? (
             <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100">
               <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
