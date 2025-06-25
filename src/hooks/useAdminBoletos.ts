@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiUrls } from '../configs/api';
 import { Ticket } from '../types';
+import { Boleto } from '../configs/interfaces';
 
 interface UseAdminBoletosReturn {
   boletos: Ticket[];
   isLoading: boolean;
-  error: Error | null;
+  error: string | null;
+  aprobarBoleto: (boletoId: string, userId: string) => Promise<void>;
+  rechazarBoleto: (boletoId: string, userId: string) => Promise<void>;
+  consumoManual: (boletoId: string) => Promise<void>;
   refreshBoletos: () => Promise<void>;
   fetchBoletosByTab: (tab: 'pending' | 'confirmed' | 'history') => Promise<void>;
 }
@@ -13,70 +17,178 @@ interface UseAdminBoletosReturn {
 export const useAdminBoletos = (): UseAdminBoletosReturn => {
   const [boletos, setBoletos] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  const transformBoleto = (boleto: any): Ticket => {
-    console.log('Transformando boleto raw:', boleto);
-    
-    // Primero determinamos el estado base
-    let status: Ticket['status'];
-    
-    // Verificamos el estado exacto que viene del backend
-    console.log('Estado del boleto del backend:', {
-      estado: boleto.estado,
-      ida: boleto.ida,
-      vuelta: boleto.vuelta
-    });
-    
-    // Si el boleto tiene ida y vuelta, está completado
-    if (boleto.ida && boleto.vuelta) {
-      status = 'completed';
+  const validarAutenticacion = useCallback(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      throw new Error('No hay token de autenticación');
     }
-    // Si solo tiene ida, está en used-ida
-    else if (boleto.ida) {
-      status = 'used-ida';
-    }
-    // Si no tiene usos, depende del estado
-    else if (boleto.estado === 'PENDIENTE' || boleto.estado === 'pendiente') {
-      status = 'pendiente';
-    } else if (boleto.estado === 'APROBADO' || boleto.estado === 'aprobado') {
-      status = 'aprobado';
-    } else if (boleto.estado === 'RECHAZADO' || boleto.estado === 'rechazado') {
-      status = 'rechazado';
-    } else {
-      // Si no hay estado definido, asumimos pendiente
-      console.warn('Boleto sin estado definido, asumiendo pendiente:', boleto);
-      status = 'pendiente';
-    }
+    return token;
+  }, []);
 
-    const transformed = {
+  const convertirBoletoATicket = useCallback((boleto: Boleto): Ticket => {
+    const nombreCompleto = boleto.usuario 
+      ? `${boleto.usuario.nombre} ${boleto.usuario.apellido}`
+      : 'Usuario';
+
+    return {
       id: boleto.id.toString(),
-      clientName: `${boleto.usuario.nombre} ${boleto.usuario.apellido}`,
+      clientId: boleto.idUsers.toString(),
+      clientName: nombreCompleto,
       destination: boleto.lote,
       purchaseDate: new Date(boleto.createdAt || Date.now()),
-      status,
+      status: boleto.estado || 'pendiente',
       uses: {
-        ida: Boolean(boleto.ida),
-        vuelta: Boolean(boleto.vuelta)
+        ida: boleto.contador > 0,
+        vuelta: boleto.contador > 1
       },
-      dni: boleto.usuario?.dni || '',
+      contador: boleto.contador,
+      dni: boleto.usuario?.dni,
+      celular: boleto.usuario?.celular,
+      email: boleto.usuario?.email,
+      rol: boleto.usuario?.rol,
       createdAt: boleto.createdAt,
       validoHasta: boleto.validoHasta,
       qrValidoHasta: boleto.qrValidoHasta,
+      estado: boleto.estado,
     };
+  }, []);
 
-    console.log('Boleto transformado:', transformed);
-    return transformed;
-  };
+  const obtenerBoletos = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = validarAutenticacion();
+
+      const response = await fetch(apiUrls.boletos.getAll, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error al obtener los boletos' }));
+        throw new Error(errorData.message || 'Error al obtener los boletos');
+      }
+
+      const data: Boleto[] = await response.json();
+      const tickets = data.map(convertirBoletoATicket);
+      setBoletos(tickets);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar los boletos';
+      setError(errorMessage);
+      console.error('Error al obtener boletos:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [validarAutenticacion, convertirBoletoATicket]);
+
+  const aprobarBoleto = useCallback(async (boletoId: string, userId: string) => {
+    try {
+      setError(null);
+      const token = validarAutenticacion();
+
+      const response = await fetch(apiUrls.boletos.aprobar(boletoId, userId), {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error al aprobar el boleto' }));
+        throw new Error(errorData.message || 'Error al aprobar el boleto');
+      }
+
+      await obtenerBoletos();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al aprobar el boleto';
+      setError(errorMessage);
+      console.error('Error al aprobar boleto:', err);
+      throw err;
+    }
+  }, [validarAutenticacion, obtenerBoletos]);
+
+  const rechazarBoleto = useCallback(async (boletoId: string, userId: string) => {
+    try {
+      setError(null);
+      const token = validarAutenticacion();
+
+      const response = await fetch(apiUrls.boletos.rechazar(boletoId, userId), {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error al rechazar el boleto' }));
+        throw new Error(errorData.message || 'Error al rechazar el boleto');
+      }
+
+      await obtenerBoletos();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al rechazar el boleto';
+      setError(errorMessage);
+      console.error('Error al rechazar boleto:', err);
+      throw err;
+    }
+  }, [validarAutenticacion, obtenerBoletos]);
+
+  const consumoManual = useCallback(async (boletoId: string) => {
+    try {
+      setError(null);
+      const token = validarAutenticacion();
+
+      const response = await fetch(apiUrls.boletos.consumoManual(boletoId), {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error al registrar consumo manual' }));
+        throw new Error(errorData.message || 'Error al registrar consumo manual');
+      }
+
+      await obtenerBoletos();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al registrar consumo manual';
+      setError(errorMessage);
+      console.error('Error al registrar consumo manual:', err);
+      throw err;
+    }
+  }, [validarAutenticacion, obtenerBoletos]);
 
   const fetchBoletosByTab = useCallback(async (tab: 'pending' | 'confirmed' | 'history') => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('No hay token de autenticación');
-      }
+      setError(null);
+
+      const token = validarAutenticacion();
 
       // Seleccionamos el endpoint según la pestaña
       let url: string;
@@ -94,116 +206,46 @@ export const useAdminBoletos = (): UseAdminBoletosReturn => {
           url = apiUrls.boletos.getAll;
       }
 
-      console.log('Fetching boletos from:', url);
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        },
       });
 
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+      }
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Error al obtener los boletos' }));
         throw new Error(errorData.message || 'Error al obtener los boletos');
       }
 
-      const data = await response.json();
-      console.log('Datos recibidos del backend:', data);
-
-      // Transformamos los boletos
-      const transformedBoletos = data.map((boleto: any) => {
-        const transformed = transformBoleto(boleto);
-        console.log('Transformando boleto:', {
-          original: boleto,
-          transformed
-        });
-        return transformed;
-      });
-
-      console.log('Boletos transformados para pestaña', tab, ':', transformedBoletos);
-      setBoletos(transformedBoletos);
-      setError(null);
-      setRetryCount(0);
+      const data: Boleto[] = await response.json();
+      const tickets = data.map(convertirBoletoATicket);
+      setBoletos(tickets);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar los boletos';
+      setError(errorMessage);
       console.error('Error al obtener boletos:', err);
-      setError(err instanceof Error ? err : new Error('Error desconocido'));
-      
-      if (err instanceof Error && (
-        err.message.includes('network') || 
-        err.message.includes('servidor') ||
-        err.message.includes('timeout')
-      )) {
-        setRetryCount(prev => prev + 1);
-      }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [validarAutenticacion, convertirBoletoATicket]);
 
-  const fetchBoletos = useCallback(async (isRetry: boolean = false) => {
-    try {
-      if (isRetry) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(retryCount + 1, 5)));
-      }
-
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('No hay token de autenticación');
-      }
-
-      const response = await fetch(apiUrls.boletos.getAll, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al obtener los boletos');
-      }
-
-      const data = await response.json();
-      const transformedBoletos: Ticket[] = data.map(transformBoleto);
-      setBoletos(transformedBoletos);
-      setError(null);
-      setRetryCount(0);
-    } catch (err) {
-      console.error('Error al obtener boletos:', err);
-      setError(err instanceof Error ? err : new Error('Error desconocido'));
-      
-      if (err instanceof Error && (
-        err.message.includes('network') || 
-        err.message.includes('servidor') ||
-        err.message.includes('timeout')
-      )) {
-        setRetryCount(prev => prev + 1);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [retryCount]);
-
-  // Efecto para la carga inicial
   useEffect(() => {
-    fetchBoletos();
-  }, [fetchBoletos]);
-
-  // Efecto para reintentos automáticos en caso de error
-  useEffect(() => {
-    if (error && retryCount > 0 && retryCount <= 3) {
-      const timer = setTimeout(() => {
-        fetchBoletos(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [error, retryCount, fetchBoletos]);
+    obtenerBoletos();
+  }, [obtenerBoletos]);
 
   return {
     boletos,
     isLoading,
     error,
-    refreshBoletos: () => fetchBoletos(),
-    fetchBoletosByTab
+    aprobarBoleto,
+    rechazarBoleto,
+    consumoManual,
+    refreshBoletos: obtenerBoletos,
+    fetchBoletosByTab,
   };
 }; 

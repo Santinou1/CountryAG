@@ -47,17 +47,35 @@ export interface CreateBoletoBody {
   lote: string;  // Solo necesitamos el lote, el idUsers viene en la URL
 }
 
+export interface User {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  rol: string;
+  dni?: string;
+  celular?: string;
+  area?: string;
+  lote?: string;
+  ocupacion?: string;
+  esPropietario?: boolean;
+  esProveedor?: boolean;
+}
+
 export interface Boleto {
   id: number;
   idUsers: number;
   codigo_boleto: string;
   lote: string;
-  ida: boolean;
-  vuelta: boolean;
+  contador: number;
   estado?: string;
-  createdAt?: string;
+  primerUso?: string;
   validoHasta?: string;
   qrValidoHasta?: string;
+  activo?: boolean;
+  qrActivo?: boolean;
+  createdAt?: string;
+  usuario?: User;
 }
 
 export interface EscaneoQR {

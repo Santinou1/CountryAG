@@ -2,9 +2,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'usuario';
+  role: 'admin' | 'usuario' | 'chofer';
   nombre?: string;
   apellido?: string;
+  dni?: string;
+  celular?: string;
 }
 
 export interface Ticket {
@@ -18,11 +20,18 @@ export interface Ticket {
     ida: boolean;
     vuelta: boolean;
   };
+  contador?: number;
   dni?: string;
+  celular?: string;
+  email?: string;
+  rol?: string;
   createdAt?: string;
   validoHasta?: string;
   qrValidoHasta?: string;
   estado?: string;
+  fechaCreacion?: string;
+  primerUso?: string;
+  paymentId?: string;
 }
 
 export interface Lote {
@@ -38,7 +47,7 @@ export interface Lote {
 export interface LoginCredentials {
   email: string;
   contraseña: string;
-  rol: 'usuario' | 'admin';
+  rol: 'usuario' | 'admin' | 'chofer';
   nombre: string;
 }
 
