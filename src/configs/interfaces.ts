@@ -76,6 +76,7 @@ export interface Boleto {
   qrActivo?: boolean;
   createdAt?: string;
   usuario?: User;
+  tipo?: 'diario' | 'unico';
 }
 
 export interface EscaneoQR {

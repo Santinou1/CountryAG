@@ -52,6 +52,7 @@ export const useAdminBoletos = (): UseAdminBoletosReturn => {
       validoHasta: boleto.validoHasta,
       qrValidoHasta: boleto.qrValidoHasta,
       estado: boleto.estado,
+      tipo: boleto.tipo,
     };
   }, []);
 

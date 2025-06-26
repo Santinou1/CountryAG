@@ -32,6 +32,7 @@ export interface Ticket {
   fechaCreacion?: string;
   primerUso?: string;
   paymentId?: string;
+  tipo?: 'diario' | 'unico';
 }
 
 export interface Lote {

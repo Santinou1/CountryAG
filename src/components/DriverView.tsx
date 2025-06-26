@@ -31,12 +31,15 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
     .filter(ticket => {
       // En la pestaña de 'confirmados', solo mostrar boletos válidos para el día de hoy.
       if (activeTab === 'confirmed') {
+        // Ocultar boletos únicos ya usados
+        if (ticket.tipo === 'unico' && ticket.contador >= 1) {
+          return false;
+        }
         // La regla principal: si un boleto tiene fecha de expiración, esta tiene prioridad.
         // Solo mostramos el boleto si la fecha de expiración aún no ha pasado.
         if (ticket.validoHasta) {
           return new Date() < new Date(ticket.validoHasta);
         }
-
         // Si el boleto NO tiene fecha de expiración, significa que es nuevo y nunca se ha usado.
         // En este caso, siempre lo mostramos en la lista de confirmados.
         return true;
@@ -278,6 +281,12 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
               {ticket.createdAt && (
                 <span className="ml-2 text-xs text-gray-400">Creado: {new Date(ticket.createdAt).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</span>
               )}
+              {ticket.tipo === 'unico' && (
+                <span className="ml-2 px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold border border-red-300">ÚNICO</span>
+              )}
+              {ticket.tipo === 'diario' && (
+                <span className="ml-2 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold border border-blue-300">DIARIO</span>
+              )}
             </motion.div>
             <motion.div 
               initial={{ opacity: 0, x: -10 }}
@@ -333,6 +342,13 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
                 >
                   Consumo Manual
                 </button>
+              </div>
+            )}
+
+            {activeTab === 'confirmed' && ticket.tipo === 'unico' && (
+              <div className="mt-2 text-xs font-semibold text-red-600">
+                Boleto Único
+                {ticket.contador >= 1 ? ' — Ya fue utilizado (un solo uso)' : ' — Válido para un solo viaje'}
               </div>
             )}
           </div>

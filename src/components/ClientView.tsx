@@ -29,6 +29,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [qrError, setQrError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [tipoBoleto, setTipoBoleto] = useState<'diario' | 'unico'>('diario');
 
   const {
     boletos,
@@ -124,6 +125,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
           payer: {
             email: user.email,
           },
+          tipo: tipoBoleto,
         }),
       });
 
@@ -228,8 +230,26 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             <CheckCircle className="w-5 h-5 text-primary" />
             <span className="font-semibold text-primary">Boleto General</span>
           </div>
-          <div className="text-sm mb-1">{BOLETO_DESCRIPCION}</div>
-          <div className="text-sm font-bold text-primary">Precio: ${BOLETO_PRECIO.toLocaleString('es-AR')}</div>
+          <div className="text-sm mb-1">{tipoBoleto === 'diario' ? 'Válido por 24 horas desde el primer escaneo. Usos ilimitados.' : 'Válido para un solo viaje. Se desactiva tras el primer uso.'}</div>
+          <div className="text-sm font-bold text-primary">Precio: {tipoBoleto === 'diario' ? '$7.000' : '$5.000'}</div>
+        </div>
+
+        {/* Selector de tipo de boleto */}
+        <div className="flex gap-2 mb-4">
+          <button
+            className={`px-4 py-2 rounded-lg border font-semibold ${tipoBoleto === 'diario' ? 'bg-primary text-white' : 'bg-white text-primary border-primary'} transition`}
+            onClick={() => setTipoBoleto('diario')}
+            disabled={isPurchasing}
+          >
+            Diario
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg border font-semibold ${tipoBoleto === 'unico' ? 'bg-primary text-white' : 'bg-white text-primary border-primary'} transition`}
+            onClick={() => setTipoBoleto('unico')}
+            disabled={isPurchasing}
+          >
+            Único
+          </button>
         </div>
 
         {/* Botón para adquirir boleto */}
@@ -272,15 +292,15 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                 <div className="flex flex-col gap-2 mb-4">
                   <div className="flex items-center justify-center gap-2 text-lg font-semibold text-secondary">
                     <span>Precio:</span>
-                    <span>${BOLETO_PRECIO.toLocaleString('es-AR')}</span>
+                    <span>{tipoBoleto === 'diario' ? '$7.000' : '$5.000'}</span>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-secondary">
                     <Clock className="w-5 h-5" />
-                    <span>Duración: 24 horas desde el primer escaneo</span>
+                    <span>{tipoBoleto === 'diario' ? 'Duración: 24 horas desde el primer escaneo' : 'Duración: 1 viaje'}</span>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-secondary">
                     <Infinity className="w-5 h-5" />
-                    <span>Usos ilimitados</span>
+                    <span>{tipoBoleto === 'diario' ? 'Usos ilimitados' : 'Único uso'}</span>
                   </div>
                 </div>
                 <div className="flex gap-4 mt-6 justify-center">
@@ -361,7 +381,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-primary">Boleto General</span>
+                          <span className="font-medium text-primary">{ticket.tipo === 'unico' ? 'Boleto Único' : 'Boleto Diario'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-dark-gray">
                           <span>Adquirido el {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -374,6 +394,11 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                             {ticket.qrValidoHasta && (
                               <div><span className="font-semibold">QR válido hasta:</span> {new Date(ticket.qrValidoHasta).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</div>
                             )}
+                          </div>
+                        )}
+                        {ticket.tipo === 'unico' && ticket.contador >= 1 && ticket.estado === 'aprobado' && (
+                          <div className="mt-2 text-sm text-red-600 font-semibold">
+                            Este boleto era de un solo uso y ya fue utilizado.
                           </div>
                         )}
                       </div>
@@ -390,16 +415,18 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                       )}
                     </div>
                     <div className="flex flex-col gap-2 mt-2">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleGenerarQR(ticket.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition-all duration-300 shadow-md w-fit"
-                        disabled={isGeneratingQR !== null}
-                      >
-                        <QrCode className="w-5 h-5" />
-                        {isGeneratingQR === ticket.id ? 'Generando...' : 'Mostrar QR'}
-                      </motion.button>
+                      {!(ticket.tipo === 'unico' && ticket.contador >= 1 && ticket.estado === 'aprobado') && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleGenerarQR(ticket.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition-all duration-300 shadow-md w-fit"
+                          disabled={isGeneratingQR !== null}
+                        >
+                          <QrCode className="w-5 h-5" />
+                          {isGeneratingQR === ticket.id ? 'Generando...' : 'Mostrar QR'}
+                        </motion.button>
+                      )}
                     </div>
                   </motion.div>
                 ))}

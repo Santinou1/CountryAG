@@ -52,6 +52,8 @@ export const useBoletos = (userId: string | undefined): UseBoletosReturn => {
       validoHasta: boleto.validoHasta,
       qrValidoHasta: boleto.qrValidoHasta,
       estado: boleto.estado,
+      tipo: boleto.tipo,
+      contador: boleto.contador,
     };
   }, []);
 

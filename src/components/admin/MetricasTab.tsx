@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
+import { BarChart3, RefreshCw, AlertCircle, Loader2, Ticket } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMetricas } from '../../hooks/useMetricas';
 import { MetricasGenerales } from './MetricasGenerales';
@@ -116,7 +116,37 @@ export const MetricasTab: React.FC = () => {
           transition={{ duration: 0.3 }}
         >
           {activeSection === 'generales' && (
-            <MetricasGenerales metricas={metricasCompletas.generales} />
+            <>
+              <MetricasGenerales metricas={metricasCompletas.generales} />
+              {/* Métricas por tipo de boleto */}
+              <div className="mt-8">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                  <Ticket className="w-6 h-6 text-blue-600" /> Métricas por Tipo de Boleto
+                </h3>
+                <div className="flex flex-col md:flex-row gap-6">
+                  {metricasCompletas.porTipo.map(tipo => (
+                    <div key={tipo.tipo} className={`flex-1 rounded-2xl p-6 border-2 shadow-md ${tipo.tipo === 'unico' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className={`px-3 py-1 rounded-full text-base font-bold tracking-wide ${tipo.tipo === 'unico' ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-blue-100 text-blue-700 border border-blue-300'}`}>{tipo.tipo === 'unico' ? 'BOLETO ÚNICO' : 'BOLETO DIARIO'}</span>
+                      </div>
+                      <div className="space-y-2 text-gray-700 text-sm">
+                        <div><span className="font-semibold">Total vendidos:</span> {tipo.total}</div>
+                        <div><span className="font-semibold">Aprobados:</span> {tipo.aprobados}</div>
+                        <div><span className="font-semibold">Ingresos:</span> ${tipo.ingresos.toLocaleString('es-AR')}</div>
+                        <div><span className="font-semibold">Usos totales:</span> {tipo.usos}</div>
+                        <div><span className="font-semibold">Promedio de usos:</span> {tipo.promedioUsos}</div>
+                        <div><span className="font-semibold">Tasa de uso:</span> {tipo.tasaUso}%</div>
+                      </div>
+                      <div className="mt-4 text-xs text-gray-500">
+                        {tipo.tipo === 'unico'
+                          ? 'Solo permite un viaje. Se desactiva tras el primer uso.'
+                          : 'Permite usos ilimitados durante el día de validez.'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
           {activeSection === 'estado' && (
             <MetricasPorEstado metricas={metricasCompletas.porEstado} />
