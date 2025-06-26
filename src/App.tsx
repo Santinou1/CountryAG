@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { LoginForm } from './components/auth/LoginForm';
-import { RegisterForm } from './components/auth/RegisterForm';
-import { ClientView } from './components/ClientView';
-import { AdminView } from './components/AdminView';
-import { DriverView } from './components/DriverView';
+// Lazy load de vistas principales
+const LoginForm = lazy(() => import('./components/auth/LoginForm'));
+const RegisterForm = lazy(() => import('./components/auth/RegisterForm'));
+const ClientView = lazy(() => import('./components/ClientView'));
+const AdminView = lazy(() => import('./components/AdminView'));
+const DriverView = lazy(() => import('./components/DriverView'));
 import { useApp } from './hooks/useApp';
 import { Loader2 } from 'lucide-react';
 
@@ -46,57 +47,64 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/register" element={<RegisterForm />} />
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute allowedRoles={['usuario']} currentUser={currentUser}>
-              <ClientView
-                user={currentUser || { id: '', name: '', email: '', role: 'usuario' }}
-              />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['admin']} currentUser={currentUser}>
-              {currentUser && currentUser.id ? (
-                <AdminView
-                  user={currentUser}
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <Loader2 className="w-10 h-10 text-green-600 animate-spin mb-4" />
+          <span className="text-green-700 font-medium">Cargando...</span>
+        </div>
+      }>
+        <Routes>
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/register" element={<RegisterForm />} />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute allowedRoles={['usuario']} currentUser={currentUser}>
+                <ClientView
+                  user={currentUser || { id: '', name: '', email: '', role: 'usuario' }}
                 />
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-screen">
-                  <Loader2 className="w-10 h-10 text-green-600 animate-spin mb-4" />
-                  <span className="text-green-700 font-medium">Cargando usuario...</span>
-                </div>
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/driver"
-          element={
-            <ProtectedRoute allowedRoles={['chofer']} currentUser={currentUser}>
-              {currentUser && currentUser.id ? (
-                <DriverView
-                  user={currentUser}
-                  onLogout={logout}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-screen">
-                  <Loader2 className="w-10 h-10 text-green-600 animate-spin mb-4" />
-                  <span className="text-green-700 font-medium">Cargando usuario...</span>
-                </div>
-              )}
-            </ProtectedRoute>
-          }
-        />
-        {/* Redirigir a login por defecto si no hay sesión */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']} currentUser={currentUser}>
+                {currentUser && currentUser.id ? (
+                  <AdminView
+                    user={currentUser}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center min-h-screen">
+                    <Loader2 className="w-10 h-10 text-green-600 animate-spin mb-4" />
+                    <span className="text-green-700 font-medium">Cargando usuario...</span>
+                  </div>
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/driver"
+            element={
+              <ProtectedRoute allowedRoles={['chofer']} currentUser={currentUser}>
+                {currentUser && currentUser.id ? (
+                  <DriverView
+                    user={currentUser}
+                    onLogout={logout}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center min-h-screen">
+                    <Loader2 className="w-10 h-10 text-green-600 animate-spin mb-4" />
+                    <span className="text-green-700 font-medium">Cargando usuario...</span>
+                  </div>
+                )}
+              </ProtectedRoute>
+            }
+          />
+          {/* Redirigir a login por defecto si no hay sesión */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

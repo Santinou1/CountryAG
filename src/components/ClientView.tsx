@@ -492,3 +492,5 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     </motion.div>
   );
 };
+
+export default ClientView;

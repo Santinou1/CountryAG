@@ -808,3 +808,5 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
     </motion.div>
   );
 };
+
+export default DriverView;

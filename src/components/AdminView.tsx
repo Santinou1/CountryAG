@@ -264,4 +264,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ user: initialUser }) => {
       )}
     </motion.div>
   );
-}; 
+};
+
+export default AdminView; 
