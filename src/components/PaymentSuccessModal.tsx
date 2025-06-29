@@ -5,9 +5,10 @@ import { CheckCircle, Info, X } from 'lucide-react';
 interface PaymentSuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
+  tipoBoleto: string;
 }
 
-export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({ isOpen, onClose }) => {
+export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({ isOpen, onClose, tipoBoleto }) => {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -43,7 +44,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({ isOpen
               <h2 className="text-2xl font-bold text-primary">¡Pago exitoso!</h2>
               
               <p className="text-secondary">
-                Has adquirido tu <span className="font-semibold">Boleto Diario San Sebastian</span>.
+                Has adquirido tu <span className="font-semibold">{tipoBoleto === 'diario' ? 'Boleto Diario San Sebastian ($6000, todo el día)' : 'Boleto Único San Sebastian ($3000, un solo viaje)'}</span>.
               </p>
 
               <div className="bg-blue-50 border border-accent rounded-xl p-4 text-left w-full mt-4">

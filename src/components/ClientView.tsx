@@ -12,8 +12,10 @@ interface ClientViewProps {
   user: User;
 }
 
-const BOLETO_PRECIO = 7000; // Precio fijo
-const BOLETO_DESCRIPCION = 'Válido por 24 horas desde el primer escaneo. Usos ilimitados.';
+const BOLETO_DIARIO_PRECIO = 6000; // Precio actualizado
+const BOLETO_UNICO_PRECIO = 3000; // Precio actualizado
+const BOLETO_DIARIO_DESCRIPCION = 'Boleto DIARIO: $6000. Válido todo el día, usos ilimitados.';
+const BOLETO_UNICO_DESCRIPCION = 'Boleto ÚNICO: $3000. Válido para un solo viaje.';
 
 export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => {
   const navigate = useNavigate();
@@ -230,8 +232,8 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             <CheckCircle className="w-5 h-5 text-primary" />
             <span className="font-semibold text-primary">Boleto General</span>
           </div>
-          <div className="text-sm mb-1">{tipoBoleto === 'diario' ? 'Válido por 24 horas desde el primer escaneo. Usos ilimitados.' : 'Válido para un solo viaje. Se desactiva tras el primer uso.'}</div>
-          <div className="text-sm font-bold text-primary">Precio: {tipoBoleto === 'diario' ? '$7.000' : '$5.000'}</div>
+          <div className="text-sm mb-1">{tipoBoleto === 'diario' ? BOLETO_DIARIO_DESCRIPCION : BOLETO_UNICO_DESCRIPCION}</div>
+          <div className="text-sm font-bold text-primary">Precio: {tipoBoleto === 'diario' ? '$6.000' : '$3.000'}</div>
         </div>
 
         {/* Selector de tipo de boleto */}
@@ -292,7 +294,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                 <div className="flex flex-col gap-2 mb-4">
                   <div className="flex items-center justify-center gap-2 text-lg font-semibold text-secondary">
                     <span>Precio:</span>
-                    <span>{tipoBoleto === 'diario' ? '$7.000' : '$5.000'}</span>
+                    <span>{tipoBoleto === 'diario' ? '$6.000' : '$3.000'}</span>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-secondary">
                     <Clock className="w-5 h-5" />
