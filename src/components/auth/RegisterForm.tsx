@@ -89,8 +89,19 @@ export const RegisterForm = () => {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Error al registrar usuario');
+        let data = {};
+        try {
+          data = await response.json();
+        } catch {}
+        // Mostrar mensaje específico si lo hay
+        if (data.message) {
+          setError(data.message);
+        } else if (typeof data === 'string') {
+          setError(data);
+        } else {
+          setError('Error al registrar usuario');
+        }
+        return;
       }
 
       navigate('/login');
