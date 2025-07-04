@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { LogOut, Loader2, QrCode, PlusCircle, CheckCircle, Clock, Infinity, RefreshCw } from 'lucide-react';
 import { User } from '../types';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -32,6 +32,16 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [tipoBoleto, setTipoBoleto] = useState<'diario' | 'unico'>('diario');
+  const [showBuyForOtherModal, setShowBuyForOtherModal] = useState(false);
+  const [compraPara, setCompraPara] = useState<'personal' | 'otro'>('personal');
+  const [dniParaOtro, setDniParaOtro] = useState('');
+  const [buyForOtherError, setBuyForOtherError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<any | null>(null);
+  const [buscandoUsuario, setBuscandoUsuario] = useState(false);
+  const [usuarioError, setUsuarioError] = useState<string | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const {
     boletos,
@@ -109,6 +119,37 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [fetchUserInfo, navigate]);
+
+  useEffect(() => {
+    if (compraPara === 'otro' && dniParaOtro.trim().length >= 7) {
+      setBuscandoUsuario(true);
+      setUsuarioError(null);
+      const token = localStorage.getItem('access_token');
+      fetch(apiUrls.users.getByDni(dniParaOtro.trim()), {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('No se encontró usuario con ese DNI');
+          return res.json();
+        })
+        .then(data => setUsuarioSeleccionado(data))
+        .catch(() => { setUsuarioSeleccionado(null); setUsuarioError('No se encontró usuario con ese DNI'); })
+        .finally(() => setBuscandoUsuario(false));
+    } else {
+      setUsuarioSeleccionado(null);
+      setUsuarioError(null);
+    }
+  }, [dniParaOtro, compraPara]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handlePurchase = async () => {
     setIsPurchasing(true);
@@ -282,7 +323,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
               <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
                 <button
                   className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={() => { setShowConfirmModal(false); setCompraPara('personal'); setDniParaOtro(''); setBuyForOtherError(null); }}
                   aria-label="Cerrar"
                 >
                   ×
@@ -291,6 +332,67 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                   <CheckCircle className="w-10 h-10 text-primary" />
                   <h2 className="text-xl font-bold text-primary">Confirmar compra de boleto</h2>
                 </div>
+                {/* Selector para quién es el boleto */}
+                <div className="flex justify-center gap-2 mb-4">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPara === 'personal' ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-gray-300'}`}
+                    onClick={() => setCompraPara('personal')}
+                  >
+                    Para mí
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPara === 'otro' ? 'bg-secondary text-white border-secondary' : 'bg-white text-secondary border-gray-300'}`}
+                    onClick={() => setCompraPara('otro')}
+                  >
+                    Para otra persona
+                  </button>
+                </div>
+                {compraPara === 'otro' && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary mb-2"
+                      placeholder="DNI del destinatario"
+                      value={dniParaOtro}
+                      onChange={e => { setDniParaOtro(e.target.value); setUsuarioSeleccionado(null); setUsuarioError(null); }}
+                      required
+                      minLength={7}
+                      maxLength={10}
+                      pattern="[0-9]+"
+                      disabled={isPurchasing}
+                      autoComplete="off"
+                    />
+                    {/* Mostrar info del usuario seleccionado */}
+                    {buscandoUsuario && (
+                      <div className="mt-2 text-secondary text-sm">Buscando usuario...</div>
+                    )}
+                    {usuarioSeleccionado && !usuarioError && (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-left text-sm">
+                        <div><span className="font-semibold">Nombre:</span> {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellido}</div>
+                        <div><span className="font-semibold">DNI:</span> {usuarioSeleccionado.dni}</div>
+                        <div><span className="font-semibold">Email:</span> {usuarioSeleccionado.email}</div>
+                        {usuarioSeleccionado.rol && <div><span className="font-semibold">Rol:</span> {usuarioSeleccionado.rol}</div>}
+                        <button
+                          type="button"
+                          className="mt-2 px-3 py-1 rounded bg-gray-200 text-gray-700 text-xs hover:bg-gray-300"
+                          onClick={() => { setDniParaOtro(''); setUsuarioSeleccionado(null); setUsuarioError(null); }}
+                        >Editar DNI</button>
+                      </div>
+                    )}
+                    {usuarioError && (
+                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-left text-sm text-red-700">
+                        {usuarioError}
+                        <button
+                          type="button"
+                          className="ml-2 px-3 py-1 rounded bg-gray-200 text-gray-700 text-xs hover:bg-gray-300"
+                          onClick={() => { setDniParaOtro(''); setUsuarioSeleccionado(null); setUsuarioError(null); }}
+                        >Editar DNI</button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-col gap-2 mb-4">
                   <div className="flex items-center justify-center gap-2 text-lg font-semibold text-secondary">
                     <span>Precio:</span>
@@ -307,20 +409,59 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                 </div>
                 <div className="flex gap-4 mt-6 justify-center">
                   <button
-                    onClick={() => setShowConfirmModal(false)}
+                    onClick={() => { setShowConfirmModal(false); setCompraPara('personal'); setDniParaOtro(''); setBuyForOtherError(null); }}
                     className="px-5 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 font-medium hover:bg-gray-100 transition"
                     disabled={isPurchasing}
                   >
                     Cancelar
                   </button>
                   <button
-                    onClick={handlePurchase}
-                    className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md"
-                    disabled={isPurchasing}
+                    onClick={async () => {
+                      setBuyForOtherError(null);
+                      setIsPurchasing(true);
+                      try {
+                        const token = localStorage.getItem('access_token');
+                        if (compraPara === 'personal') {
+                          await handlePurchase();
+                        } else {
+                          const response = await fetch(apiUrls.mercadopago.comprarParaOtro, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                              payer: { email: user.email },
+                              dni: dniParaOtro.trim(),
+                            }),
+                          });
+                          if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.message || 'No se pudo generar el link de pago.');
+                          }
+                          const preference = await response.json();
+                          if (preference.init_point) {
+                            window.location.href = preference.init_point;
+                          } else {
+                            throw new Error('No se recibió un link de pago válido.');
+                          }
+                        }
+                      } catch (err: any) {
+                        setBuyForOtherError(err.message || 'Error al iniciar la compra');
+                        setIsPurchasing(false);
+                      }
+                    }}
+                    className={`px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md ${isPurchasing ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    disabled={isPurchasing || (compraPara === 'otro' && (!dniParaOtro.trim() || !usuarioSeleccionado))}
                   >
                     {isPurchasing ? 'Redirigiendo...' : 'Confirmar y Pagar'}
                   </button>
                 </div>
+                {buyForOtherError && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg mt-2 text-center">
+                    {buyForOtherError}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -487,6 +628,93 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
               >
                 Entendido
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal para comprar boleto para otra persona */}
+      <AnimatePresence>
+        {showBuyForOtherModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+                onClick={() => { setShowBuyForOtherModal(false); setBuyForOtherError(null); setDniParaOtro(''); }}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+              <div className="flex flex-col items-center gap-3 mb-4">
+                <PlusCircle className="w-10 h-10 text-secondary" />
+                <h2 className="text-xl font-bold text-secondary">Comprar boleto para otra persona</h2>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsBuyingForOther(true);
+                  setBuyForOtherError(null);
+                  try {
+                    const token = localStorage.getItem('access_token');
+                    const response = await fetch(apiUrls.mercadopago.comprarParaOtro, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        payer: { email: user.email },
+                        dni: dniParaOtro.trim(),
+                      }),
+                    });
+                    if (!response.ok) {
+                      const data = await response.json().catch(() => ({}));
+                      throw new Error(data.message || 'No se pudo generar el link de pago.');
+                    }
+                    const preference = await response.json();
+                    if (preference.init_point) {
+                      window.location.href = preference.init_point;
+                    } else {
+                      throw new Error('No se recibió un link de pago válido.');
+                    }
+                  } catch (err: any) {
+                    setBuyForOtherError(err.message || 'Error al iniciar la compra');
+                  } finally {
+                    setIsBuyingForOther(false);
+                  }
+                }}
+                className="flex flex-col gap-4"
+              >
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="DNI del destinatario"
+                  value={dniParaOtro}
+                  onChange={e => setDniParaOtro(e.target.value)}
+                  required
+                  minLength={7}
+                  maxLength={10}
+                  pattern="[0-9]+"
+                  disabled={isBuyingForOther}
+                />
+                <button
+                  type="submit"
+                  className="w-full px-5 py-2 rounded-lg bg-secondary text-white font-semibold hover:bg-primary transition shadow-md"
+                  disabled={isBuyingForOther || !dniParaOtro.trim()}
+                >
+                  {isBuyingForOther ? 'Redirigiendo...' : 'Comprar boleto'}
+                </button>
+                {buyForOtherError && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg mt-2 text-center">
+                    {buyForOtherError}
+                  </div>
+                )}
+              </form>
             </div>
           </motion.div>
         )}
