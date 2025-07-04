@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { LogOut, Loader2, QrCode, PlusCircle, CheckCircle, Clock, Infinity, RefreshCw } from 'lucide-react';
+import { LogOut, Loader2, QrCode, PlusCircle, CheckCircle, Clock, Infinity, RefreshCw, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import { User } from '../types';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiUrls } from '../configs/api';
@@ -42,6 +42,10 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [buscandoUsuario, setBuscandoUsuario] = useState(false);
   const [usuarioError, setUsuarioError] = useState<string | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [cantidad, setCantidad] = useState(1);
+  const [showDetalles, setShowDetalles] = useState(false);
+  const [showUsados, setShowUsados] = useState(false);
+  const [showPendientes, setShowPendientes] = useState(false);
 
   const {
     boletos,
@@ -51,6 +55,12 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     refreshBoletos,
     generarQR
   } = useBoletos(user.id);
+
+  // Agrupar boletos por estado
+  const boletosAprobados = boletos.filter(b => b.tipo === 'unico' && b.estado === 'aprobado');
+  const boletosDisponibles = boletosAprobados.filter(b => (b.contador ?? 0) < 1);
+  const boletosUsados = boletosAprobados.filter(b => (b.contador ?? 0) >= 1);
+  const boletosPendientes = boletos.filter(b => b.tipo === 'unico' && b.estado === 'pendiente');
 
   const fetchUserInfo = useCallback(async () => {
     try {
@@ -133,7 +143,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
           return res.json();
         })
         .then(data => setUsuarioSeleccionado(data))
-        .catch(() => { setUsuarioSeleccionado(null); setUsuarioError('No se encontró usuario con ese DNI'); })
+        .catch(() => { setUsuarioSeleccionado(null); setUsuarioError(null); })
         .finally(() => setBuscandoUsuario(false));
     } else {
       setUsuarioSeleccionado(null);
@@ -349,6 +359,26 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                     Para otra persona
                   </button>
                 </div>
+                {/* Selector de cantidad */}
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <button
+                    type="button"
+                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-lg"
+                    onClick={() => setCantidad(c => Math.max(1, c - 1))}
+                    disabled={isPurchasing || cantidad <= 1}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-lg font-bold w-8 text-center">{cantidad}</span>
+                  <button
+                    type="button"
+                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-lg"
+                    onClick={() => setCantidad(c => c + 1)}
+                    disabled={isPurchasing}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
                 {compraPara === 'otro' && (
                   <div className="relative">
                     <input
@@ -396,15 +426,15 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                 <div className="flex flex-col gap-2 mb-4">
                   <div className="flex items-center justify-center gap-2 text-lg font-semibold text-secondary">
                     <span>Precio:</span>
-                    <span>$2.500</span>
+                    <span>${(2500 * cantidad).toLocaleString('es-AR')}</span>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-secondary">
                     <Clock className="w-5 h-5" />
-                    <span>Duración: 1 viaje</span>
+                    <span>Duración: {cantidad === 1 ? '1 viaje' : `${cantidad} viajes`}</span>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-secondary">
                     <Infinity className="w-5 h-5" />
-                    <span>Único uso</span>
+                    <span>{cantidad === 1 ? 'Único uso' : `Cada boleto es de un solo uso`}</span>
                   </div>
                 </div>
                 <div className="flex gap-4 mt-6 justify-center">
@@ -422,7 +452,30 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                       try {
                         const token = localStorage.getItem('access_token');
                         if (compraPara === 'personal') {
-                          await handlePurchase();
+                          await fetch(apiUrls.mercadopago.createPreference, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                              payer: { email: user.email },
+                              tipo: 'unico',
+                              cantidad,
+                            }),
+                          })
+                            .then(async response => {
+                              if (!response.ok) {
+                                const data = await response.json().catch(() => ({}));
+                                throw new Error(data.message || 'No se pudo generar el link de pago.');
+                              }
+                              const preference = await response.json();
+                              if (preference.init_point) {
+                                window.location.href = preference.init_point;
+                              } else {
+                                throw new Error('No se recibió un link de pago válido.');
+                              }
+                            });
                         } else {
                           const response = await fetch(apiUrls.mercadopago.comprarParaOtro, {
                             method: 'POST',
@@ -433,6 +486,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                             body: JSON.stringify({
                               payer: { email: user.email },
                               dni: dniParaOtro.trim(),
+                              cantidad,
                             }),
                           });
                           if (!response.ok) {
@@ -473,109 +527,121 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
           onClose={() => setShowSuccessModal(false)}
         />
 
-        {/* Lista de boletos */}
-        <div className="space-y-4 mt-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-primary">Tus Boletos</h2>
-            <motion.button
-              whileHover={{ scale: 1.1, rotate: 180 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => refreshBoletos()}
-              disabled={isLoading}
-              className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Actualizar boletos"
+        {/* Resumen de boletos */}
+        <div className="max-w-md mx-auto mb-4">
+          <div className="bg-white rounded-xl shadow-md p-4 flex flex-col items-center border border-gray-200">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-3xl">🎟️</span>
+              <span className="text-xl font-bold text-primary">Boletos Únicos Disponibles: {boletosDisponibles.length}</span>
+            </div>
+            <div className="flex gap-4 text-sm">
+              <span className="flex items-center gap-1 text-green-700 font-semibold"><CheckCircle className="w-4 h-4" />Usados: {boletosUsados.length}</span>
+              <span className="flex items-center gap-1 text-yellow-700 font-semibold"><Clock className="w-4 h-4" />Pendientes: {boletosPendientes.length}</span>
+            </div>
+            <button
+              className="mt-3 flex items-center gap-1 text-primary hover:text-secondary text-sm font-semibold focus:outline-none"
+              onClick={() => setShowDetalles(v => !v)}
             >
-              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-            </motion.button>
+              {showDetalles ? 'Ocultar detalles' : 'Ver detalles de mis boletos'}
+              {showDetalles ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
           </div>
-          {isLoading ? (
-            <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100">
-              <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
-              <p className="text-secondary">Cargando boletos...</p>
-            </div>
-          ) : boletosError ? (
-            <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-red-100">
-              <p className="text-red-600 mb-2">Error al cargar los boletos</p>
-              <button
-                onClick={() => refreshBoletos()}
-                className="text-sm text-primary hover:text-secondary"
-              >
-                Intentar de nuevo
-              </button>
-            </div>
-          ) : boletos.length === 0 ? (
-            <div className="text-center py-8 bg-white rounded-xl shadow-sm border border-gray-100">
-              <p className="text-gray-500">No tienes boletos aún</p>
-              <p className="text-sm text-gray-400 mb-4">Adquiere tu primer boleto para acceder al country</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {boletos
-                .sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime())
-                .map((ticket, index) => (
-                  <motion.div
-                    key={ticket.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-primary">{ticket.tipo === 'unico' ? 'Boleto Único' : 'Boleto Diario'}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-dark-gray">
-                          <span>Adquirido el {ticket.purchaseDate.toLocaleDateString('es-AR')} {ticket.purchaseDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        {(ticket.validoHasta || ticket.qrValidoHasta) && (
-                          <div className="mt-2 flex flex-col gap-1 text-xs text-secondary bg-gray-50 rounded-lg p-2 border border-gray-100">
-                            {ticket.validoHasta && (
-                              <div><span className="font-semibold">Válido hasta:</span> {new Date(ticket.validoHasta).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</div>
-                            )}
-                            {ticket.qrValidoHasta && (
-                              <div><span className="font-semibold">QR válido hasta:</span> {new Date(ticket.qrValidoHasta).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</div>
-                            )}
-                          </div>
-                        )}
-                        {ticket.tipo === 'unico' && ticket.contador >= 1 && ticket.estado === 'aprobado' && (
-                          <div className="mt-2 text-sm text-red-600 font-semibold">
-                            Este boleto era de un solo uso y ya fue utilizado.
-                          </div>
-                        )}
-                      </div>
-                      {ticket.estado && (
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full font-semibold
-                            ${ticket.estado === 'aprobado' ? 'bg-blue-100 text-primary' : ''}
-                            ${ticket.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : ''}
-                            ${ticket.estado === 'rechazado' ? 'bg-red-100 text-red-800' : ''}
-                          `}
-                        >
-                          {ticket.estado.charAt(0).toUpperCase() + ticket.estado.slice(1)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2 mt-2">
-                      {!(ticket.tipo === 'unico' && ticket.contador >= 1 && ticket.estado === 'aprobado') && (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => handleGenerarQR(ticket.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition-all duration-300 shadow-md w-fit"
-                          disabled={isGeneratingQR !== null}
-                        >
-                          <QrCode className="w-5 h-5" />
-                          {isGeneratingQR === ticket.id ? 'Generando...' : 'Mostrar QR'}
-                        </motion.button>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-            </div>
-          )}
         </div>
+
+        {/* Lista de boletos agrupada y colapsable */}
+        {showDetalles && (
+          <div className="space-y-4 mt-2">
+            {/* Disponibles */}
+            {boletosDisponibles.length > 0 && (
+              <div>
+                <h3 className="text-md font-semibold text-primary mb-2">Disponibles</h3>
+                <div className="space-y-2">
+                  {boletosDisponibles.map((ticket, index) => (
+                    <motion.div
+                      key={ticket.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3"
+                    >
+                      <span className="font-medium text-primary">Boleto Único</span>
+                      <span className="ml-auto text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">Disponible</span>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleGenerarQR(ticket.id)}
+                        className="flex items-center gap-2 px-3 py-1 bg-primary text-white rounded-lg hover:bg-secondary transition-all duration-300 shadow-md text-xs"
+                        disabled={isGeneratingQR !== null}
+                      >
+                        <QrCode className="w-4 h-4" />QR
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Usados - acordeón */}
+            {boletosUsados.length > 0 && (
+              <div>
+                <button
+                  className="w-full flex items-center justify-between text-md font-semibold text-primary mt-4 mb-2 focus:outline-none"
+                  onClick={() => setShowUsados(v => !v)}
+                >
+                  <span>Usados</span>
+                  {showUsados ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showUsados && (
+                  <div className="space-y-2">
+                    {boletosUsados.map((ticket, index) => (
+                      <motion.div
+                        key={ticket.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="bg-gray-50 rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 opacity-60"
+                      >
+                        <span className="font-medium text-primary">Boleto Único</span>
+                        <span className="ml-auto text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">Usado</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Pendientes - acordeón */}
+            {boletosPendientes.length > 0 && (
+              <div>
+                <button
+                  className="w-full flex items-center justify-between text-md font-semibold text-primary mt-4 mb-2 focus:outline-none"
+                  onClick={() => setShowPendientes(v => !v)}
+                >
+                  <span>Pendientes</span>
+                  {showPendientes ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showPendientes && (
+                  <div className="space-y-2">
+                    {boletosPendientes.map((ticket, index) => (
+                      <motion.div
+                        key={ticket.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="bg-yellow-50 rounded-xl p-3 shadow-sm border border-yellow-100 flex items-center gap-3"
+                      >
+                        <span className="font-medium text-primary">Boleto Único</span>
+                        <span className="ml-auto text-xs text-yellow-700 bg-yellow-200 px-2 py-1 rounded-full">Pendiente</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Si no hay boletos */}
+            {boletosDisponibles.length === 0 && boletosUsados.length === 0 && boletosPendientes.length === 0 && (
+              <div className="text-center text-gray-500 py-8">No tienes boletos aún</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modal de QR con animación */}
