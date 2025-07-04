@@ -44,7 +44,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({ isOpen
               <h2 className="text-2xl font-bold text-primary">¡Pago exitoso!</h2>
               
               <p className="text-secondary">
-                Has adquirido tu <span className="font-semibold">{tipoBoleto === 'diario' ? 'Boleto Diario San Sebastian ($6000, todo el día)' : 'Boleto Único San Sebastian ($3000, un solo viaje)'}</span>.
+                Has adquirido tu <span className="font-semibold">Boleto Único San Sebastian ($2500, un solo viaje)</span>.
               </p>
 
               <div className="bg-blue-50 border border-accent rounded-xl p-4 text-left w-full mt-4">
