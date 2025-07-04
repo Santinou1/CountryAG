@@ -11,6 +11,7 @@ export const apiUrls = {
     login: `${baseUrl}/api/auth/login`,
     logout: `${baseUrl}/api/auth/logout`,
     me: `${baseUrl}/api/users/me`,
+    getByDni: (dni: string) => `${baseUrl}/api/users/by-dni/${dni}`,
   },
   boletos: {
     crear: (userId: string) => `${baseUrl}/api/boletos/crear/${userId}`,
@@ -34,6 +35,7 @@ export const apiUrls = {
   },
   mercadopago: {
     createPreference: `${baseUrl}/api/mercadopago/create-preference`,
+    comprarParaOtro: `${baseUrl}/api/mercadopago/comprar-para-otro`,
   },
   metricas: {
     completas: `${baseUrl}/api/metricas`,
