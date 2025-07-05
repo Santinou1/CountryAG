@@ -36,6 +36,7 @@ export const apiUrls = {
   mercadopago: {
     createPreference: `${baseUrl}/api/mercadopago/create-preference`,
     comprarParaOtro: `${baseUrl}/api/mercadopago/comprar-para-otro`,
+    comprarPack: `${baseUrl}/api/mercadopago/comprar-pack`,
   },
   metricas: {
     completas: `${baseUrl}/api/metricas`,

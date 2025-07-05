@@ -9,9 +9,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "dev-host": "vite --host" 
+    "dev-host": "vite --host"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.4",
     "@nestjs/jwt": "^11.0.0",
     "bcrypt": "^6.0.0",
     "framer-motion": "^12.18.1",

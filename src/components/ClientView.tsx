@@ -7,6 +7,7 @@ import { useBoletos } from '../hooks/useBoletos';
 import { QRModal } from './QRModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PaymentSuccessModal } from './PaymentSuccessModal';
+import { Dialog } from '@headlessui/react';
 
 interface ClientViewProps {
   user: User;
@@ -31,7 +32,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [qrError, setQrError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tipoBoleto, setTipoBoleto] = useState<'diario' | 'unico'>('diario');
+  const [tipoBoleto, setTipoBoleto] = useState<'diario' | 'unico' | '10' | '20' | '40'>('unico');
   const [showBuyForOtherModal, setShowBuyForOtherModal] = useState(false);
   const [compraPara, setCompraPara] = useState<'personal' | 'otro'>('personal');
   const [dniParaOtro, setDniParaOtro] = useState('');
@@ -46,6 +47,15 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
   const [showDetalles, setShowDetalles] = useState(false);
   const [showUsados, setShowUsados] = useState(false);
   const [showPendientes, setShowPendientes] = useState(false);
+  const [showPackModal, setShowPackModal] = useState(false);
+  const [packSeleccionado, setPackSeleccionado] = useState<'10' | '20' | '40' | null>(null);
+  const [isBuyingPack, setIsBuyingPack] = useState(false);
+  const [packError, setPackError] = useState<string | null>(null);
+  const [compraPackPara, setCompraPackPara] = useState<'personal' | 'otro'>('personal');
+  const [dniPack, setDniPack] = useState('');
+  const [usuarioPack, setUsuarioPack] = useState<any | null>(null);
+  const [buscandoUsuarioPack, setBuscandoUsuarioPack] = useState(false);
+  const [usuarioPackError, setUsuarioPackError] = useState<string | null>(null);
 
   const {
     boletos,
@@ -160,6 +170,27 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (compraPackPara === 'otro' && dniPack.trim().length >= 7) {
+      setBuscandoUsuarioPack(true);
+      setUsuarioPackError(null);
+      const token = localStorage.getItem('access_token');
+      fetch(apiUrls.users.getByDni(dniPack.trim()), {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('No se encontró usuario con ese DNI');
+          return res.json();
+        })
+        .then(data => setUsuarioPack(data))
+        .catch(() => { setUsuarioPack(null); setUsuarioPackError('No se encontró usuario con ese DNI'); })
+        .finally(() => setBuscandoUsuarioPack(false));
+    } else {
+      setUsuarioPack(null);
+      setUsuarioPackError(null);
+    }
+  }, [dniPack, compraPackPara]);
 
   const handlePurchase = async () => {
     setIsPurchasing(true);
@@ -321,211 +352,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
           </div>
         )}
 
-        {/* Modal de confirmación */}
-        <AnimatePresence>
-          {showConfirmModal && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-            >
-              <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
-                <button
-                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
-                  onClick={() => { setShowConfirmModal(false); setCompraPara('personal'); setDniParaOtro(''); setBuyForOtherError(null); }}
-                  aria-label="Cerrar"
-                >
-                  ×
-                </button>
-                <div className="flex flex-col items-center gap-3 mb-4">
-                  <CheckCircle className="w-10 h-10 text-primary" />
-                  <h2 className="text-xl font-bold text-primary">Confirmar compra de boleto</h2>
-                </div>
-                {/* Selector para quién es el boleto */}
-                <div className="flex justify-center gap-2 mb-4">
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPara === 'personal' ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-gray-300'}`}
-                    onClick={() => setCompraPara('personal')}
-                  >
-                    Para mí
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPara === 'otro' ? 'bg-secondary text-white border-secondary' : 'bg-white text-secondary border-gray-300'}`}
-                    onClick={() => setCompraPara('otro')}
-                  >
-                    Para otra persona
-                  </button>
-                </div>
-                {/* Selector de cantidad */}
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  <button
-                    type="button"
-                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-lg"
-                    onClick={() => setCantidad(c => Math.max(1, c - 1))}
-                    disabled={isPurchasing || cantidad <= 1}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="text-lg font-bold w-8 text-center">{cantidad}</span>
-                  <button
-                    type="button"
-                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-lg"
-                    onClick={() => setCantidad(c => c + 1)}
-                    disabled={isPurchasing}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-                {compraPara === 'otro' && (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary mb-2"
-                      placeholder="DNI del destinatario"
-                      value={dniParaOtro}
-                      onChange={e => { setDniParaOtro(e.target.value); setUsuarioSeleccionado(null); setUsuarioError(null); }}
-                      required
-                      minLength={7}
-                      maxLength={10}
-                      pattern="[0-9]+"
-                      disabled={isPurchasing}
-                      autoComplete="off"
-                    />
-                    {/* Mostrar info del usuario seleccionado */}
-                    {buscandoUsuario && (
-                      <div className="mt-2 text-secondary text-sm">Buscando usuario...</div>
-                    )}
-                    {usuarioSeleccionado && !usuarioError && (
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-left text-sm">
-                        <div><span className="font-semibold">Nombre:</span> {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellido}</div>
-                        <div><span className="font-semibold">DNI:</span> {usuarioSeleccionado.dni}</div>
-                        <div><span className="font-semibold">Email:</span> {usuarioSeleccionado.email}</div>
-                        {usuarioSeleccionado.rol && <div><span className="font-semibold">Rol:</span> {usuarioSeleccionado.rol}</div>}
-                        <button
-                          type="button"
-                          className="mt-2 px-3 py-1 rounded bg-gray-200 text-gray-700 text-xs hover:bg-gray-300"
-                          onClick={() => { setDniParaOtro(''); setUsuarioSeleccionado(null); setUsuarioError(null); }}
-                        >Editar DNI</button>
-                      </div>
-                    )}
-                    {usuarioError && (
-                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-left text-sm text-red-700">
-                        {usuarioError}
-                        <button
-                          type="button"
-                          className="ml-2 px-3 py-1 rounded bg-gray-200 text-gray-700 text-xs hover:bg-gray-300"
-                          onClick={() => { setDniParaOtro(''); setUsuarioSeleccionado(null); setUsuarioError(null); }}
-                        >Editar DNI</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div className="flex flex-col gap-2 mb-4">
-                  <div className="flex items-center justify-center gap-2 text-lg font-semibold text-secondary">
-                    <span>Precio:</span>
-                    <span>${(2500 * cantidad).toLocaleString('es-AR')}</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-secondary">
-                    <Clock className="w-5 h-5" />
-                    <span>Duración: {cantidad === 1 ? '1 viaje' : `${cantidad} viajes`}</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-secondary">
-                    <Infinity className="w-5 h-5" />
-                    <span>{cantidad === 1 ? 'Único uso' : `Cada boleto es de un solo uso`}</span>
-                  </div>
-                </div>
-                <div className="flex gap-4 mt-6 justify-center">
-                  <button
-                    onClick={() => { setShowConfirmModal(false); setCompraPara('personal'); setDniParaOtro(''); setBuyForOtherError(null); }}
-                    className="px-5 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 font-medium hover:bg-gray-100 transition"
-                    disabled={isPurchasing}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={async () => {
-                      setBuyForOtherError(null);
-                      setIsPurchasing(true);
-                      try {
-                        const token = localStorage.getItem('access_token');
-                        if (compraPara === 'personal') {
-                          await fetch(apiUrls.mercadopago.createPreference, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                              payer: { email: user.email },
-                              tipo: 'unico',
-                              cantidad,
-                            }),
-                          })
-                            .then(async response => {
-                              if (!response.ok) {
-                                const data = await response.json().catch(() => ({}));
-                                throw new Error(data.message || 'No se pudo generar el link de pago.');
-                              }
-                              const preference = await response.json();
-                              if (preference.init_point) {
-                                window.location.href = preference.init_point;
-                              } else {
-                                throw new Error('No se recibió un link de pago válido.');
-                              }
-                            });
-                        } else {
-                          const response = await fetch(apiUrls.mercadopago.comprarParaOtro, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                              payer: { email: user.email },
-                              dni: dniParaOtro.trim(),
-                              cantidad,
-                            }),
-                          });
-                          if (!response.ok) {
-                            const data = await response.json().catch(() => ({}));
-                            throw new Error(data.message || 'No se pudo generar el link de pago.');
-                          }
-                          const preference = await response.json();
-                          if (preference.init_point) {
-                            window.location.href = preference.init_point;
-                          } else {
-                            throw new Error('No se recibió un link de pago válido.');
-                          }
-                        }
-                      } catch (err: any) {
-                        setBuyForOtherError(err.message || 'Error al iniciar la compra');
-                        setIsPurchasing(false);
-                      }
-                    }}
-                    className={`px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md ${isPurchasing ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    disabled={isPurchasing || (compraPara === 'otro' && (!dniParaOtro.trim() || !usuarioSeleccionado))}
-                  >
-                    {isPurchasing ? 'Redirigiendo...' : 'Confirmar y Pagar'}
-                  </button>
-                </div>
-                {buyForOtherError && (
-                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg mt-2 text-center">
-                    {buyForOtherError}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        {/* Modal de pago exitoso */}
-        <PaymentSuccessModal 
-          isOpen={showSuccessModal}
-          onClose={() => setShowSuccessModal(false)}
-        />
 
         {/* Resumen de boletos */}
         <div className="max-w-md mx-auto mb-4">
@@ -642,101 +469,383 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             )}
           </div>
         )}
-      </div>
 
-      {/* Modal de QR con animación */}
-      <AnimatePresence>
-        {(qrData || isGeneratingQR) && (
-          <QRModal
-            isOpen={!!qrData}
-            onClose={() => setQrData(null)}
-            title={qrTitle}
-            qrCode={qrData?.qrCode || ''}
-            codigo={qrData?.codigo || ''}
-          />
-        )}
-      </AnimatePresence>
+        {/* Modal de pago exitoso */}
+        <PaymentSuccessModal 
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          tipoBoleto={tipoBoleto}
+        />
 
-      {/* Modal de error QR */}
-      <AnimatePresence>
-        {qrError && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-          >
-            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
-              <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
-                onClick={() => setQrError(null)}
-                aria-label="Cerrar"
-              >
-                ×
-              </button>
-              <div className="flex flex-col items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
+        {/* Modal de QR con animación */}
+        <AnimatePresence>
+          {(qrData || isGeneratingQR) && (
+            <QRModal
+              isOpen={!!qrData}
+              onClose={() => setQrData(null)}
+              title={qrTitle}
+              qrCode={qrData?.qrCode || ''}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Modal de error QR */}
+        <AnimatePresence>
+          {qrError && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+            >
+              <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+                <button
+                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+                  onClick={() => setQrError(null)}
+                  aria-label="Cerrar"
+                >
+                  ×
+                </button>
+                <div className="flex flex-col items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-dark-gray">No se puede generar el QR</h2>
                 </div>
-                <h2 className="text-xl font-bold text-dark-gray">No se puede generar el QR</h2>
+                <div className="text-base text-secondary mb-6">
+                  {qrError.includes('no está aprobado') 
+                    ? 'Tu boleto aún está pendiente de aprobación. Por favor, espera a que sea confirmado por el administrador.'
+                    : qrError
+                  }
+                </div>
+                <button
+                  onClick={() => setQrError(null)}
+                  className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md"
+                >
+                  Entendido
+                </button>
               </div>
-              <div className="text-base text-secondary mb-6">
-                {qrError.includes('no está aprobado') 
-                  ? 'Tu boleto aún está pendiente de aprobación. Por favor, espera a que sea confirmado por el administrador.'
-                  : qrError
-                }
-              </div>
-              <button
-                onClick={() => setQrError(null)}
-                className="px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md"
-              >
-                Entendido
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Modal para comprar boleto para otra persona */}
-      <AnimatePresence>
-        {showBuyForOtherModal && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-          >
-            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
-              <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
-                onClick={() => { setShowBuyForOtherModal(false); setBuyForOtherError(null); setDniParaOtro(''); }}
-                aria-label="Cerrar"
-              >
-                ×
-              </button>
-              <div className="flex flex-col items-center gap-3 mb-4">
-                <PlusCircle className="w-10 h-10 text-secondary" />
-                <h2 className="text-xl font-bold text-secondary">Comprar boleto para otra persona</h2>
+        {/* Modal de confirmación de compra de boleto individual */}
+        <Dialog open={showConfirmModal} onClose={() => { setShowConfirmModal(false); setCompraPara('personal'); setDniParaOtro(''); setUsuarioSeleccionado(null); setBuyForOtherError(null); setCantidad(1); setTipoBoleto('unico'); }} className="fixed z-50 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
+            <div className="relative bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center z-10">
+              <Dialog.Title className="text-xl font-bold text-primary mb-4">¿Qué quieres comprar?</Dialog.Title>
+              
+              {/* Selector de tipo de compra */}
+              <div className="grid grid-cols-1 gap-2 mb-6">
+                {/* Boleto Individual */}
+                <button
+                  type="button"
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all min-h-[56px] ${tipoBoleto === 'unico' ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-primary hover:border-primary'}`}
+                  onClick={() => setTipoBoleto('unico')}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="text-base font-bold">Boleto Único</span>
+                    <span className="text-xs text-primary/80 font-semibold">1 viaje</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-lg font-bold">$2.500</span>
+                    <span className="text-xs text-primary/70">c/u</span>
+                  </div>
+                </button>
+
+                {/* Packs */}
+                {[
+                  {n: '10', label: 'Pack Básico', total: 20000},
+                  {n: '20', label: 'Pack Premium', total: 40000},
+                  {n: '40', label: 'Pack Pro', total: 80000}
+                ].map(pack => (
+                  <button
+                    key={pack.n}
+                    type="button"
+                    className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all min-h-[56px] ${tipoBoleto === pack.n ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-primary hover:border-primary'}`}
+                    onClick={() => setTipoBoleto(pack.n as '10' | '20' | '40')}
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="text-base font-bold">{pack.label}</span>
+                      <span className="text-xs text-primary/80 font-semibold">{pack.n} viajes</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-lg font-bold">${pack.total.toLocaleString('es-AR')}</span>
+                      <span className="text-xs text-primary/70">${(pack.total/parseInt(pack.n)).toLocaleString('es-AR')} c/u</span>
+                    </div>
+                  </button>
+                ))}
               </div>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setIsBuyingForOther(true);
+
+              {/* Detalles de la compra seleccionada */}
+              {tipoBoleto === 'unico' && (
+                <div className="mb-4">
+                  <div className="text-lg font-semibold mb-1">Boleto Único</div>
+                  <div className="text-2xl font-bold text-primary mb-1">${(BOLETO_UNICO_PRECIO * cantidad).toLocaleString('es-AR')}</div>
+                  <div className="text-sm text-secondary">Precio por boleto: $2.500</div>
+                  
+                  {/* Selector de cantidad solo para boleto individual */}
+                  <div className="flex items-center justify-center gap-4 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setCantidad(Math.max(1, cantidad - 1))}
+                      className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                      disabled={cantidad <= 1}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="text-lg font-semibold min-w-[2rem]">{cantidad}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCantidad(cantidad + 1)}
+                      className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {tipoBoleto !== 'unico' && (
+                <div className="mb-4">
+                  <div className="text-lg font-semibold mb-1">
+                    {tipoBoleto === '10' && 'Pack Básico'}
+                    {tipoBoleto === '20' && 'Pack Premium'}
+                    {tipoBoleto === '40' && 'Pack Pro'}
+                  </div>
+                  <div className="text-2xl font-bold text-primary mb-1">${tipoBoleto ? (parseInt(tipoBoleto) * 2000).toLocaleString('es-AR') : ''}</div>
+                  <div className="text-sm text-secondary">Recibirás {tipoBoleto} boletos únicos a $2.000 cada uno.</div>
+                </div>
+              )}
+
+              {/* Selector para quién es el boleto */}
+              <div className="flex justify-center gap-2 mb-4">
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPara === 'personal' ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-gray-300'}`}
+                  onClick={() => setCompraPara('personal')}
+                >
+                  Para mí
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPara === 'otro' ? 'bg-secondary text-white border-secondary' : 'bg-white text-secondary border-gray-300'}`}
+                  onClick={() => setCompraPara('otro')}
+                >
+                  Para otra persona
+                </button>
+              </div>
+
+              {compraPara === 'otro' && (
+                <div className="relative mb-2">
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary mb-2"
+                    placeholder="DNI del destinatario"
+                    value={dniParaOtro}
+                    onChange={e => { setDniParaOtro(e.target.value); setUsuarioSeleccionado(null); setBuyForOtherError(null); }}
+                    required
+                    minLength={7}
+                    maxLength={10}
+                    pattern="[0-9]+"
+                    autoComplete="off"
+                  />
+                  {buscandoUsuario && (
+                    <div className="mt-1 text-secondary text-xs">Buscando usuario...</div>
+                  )}
+                  {usuarioSeleccionado && !usuarioError && (
+                    <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-left text-xs">
+                      <div><span className="font-semibold">Nombre:</span> {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellido}</div>
+                      <div><span className="font-semibold">DNI:</span> {usuarioSeleccionado.dni}</div>
+                      <div><span className="font-semibold">Email:</span> {usuarioSeleccionado.email}</div>
+                      {usuarioSeleccionado.rol && <div><span className="font-semibold">Rol:</span> {usuarioSeleccionado.rol}</div>}
+                    </div>
+                  )}
+                  {usuarioError && (
+                    <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-left text-xs text-red-700">
+                      {usuarioError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button
+                className="w-full px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md mb-2"
+                disabled={isPurchasing || (compraPara === 'otro' && (!dniParaOtro.trim() || !usuarioSeleccionado))}
+                onClick={async () => {
+                  setIsPurchasing(true);
                   setBuyForOtherError(null);
                   try {
                     const token = localStorage.getItem('access_token');
-                    const response = await fetch(apiUrls.mercadopago.comprarParaOtro, {
+                    if (!token) throw new Error('No estás autenticado');
+
+                    let response;
+                    
+                    if (tipoBoleto === 'unico') {
+                      // Compra de boleto individual
+                      const body: any = {
+                        payer: { email: user.email },
+                        tipo: 'unico',
+                        cantidad: cantidad
+                      };
+
+                      if (compraPara === 'otro') {
+                        body.dni = dniParaOtro.trim();
+                      }
+
+                      response = await fetch(apiUrls.mercadopago.createPreference, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify(body),
+                      });
+                    } else {
+                      // Compra de pack
+                      const body: any = {
+                        payer: { email: user.email },
+                        packType: tipoBoleto,
+                      };
+                      
+                      if (compraPara === 'otro') {
+                        body.dni = dniParaOtro.trim();
+                      }
+
+                      response = await fetch(apiUrls.mercadopago.comprarPack, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify(body),
+                      });
+                    }
+
+                    if (!response.ok) {
+                      const data = await response.json().catch(() => ({}));
+                      throw new Error(data.message || 'No se pudo generar el link de pago.');
+                    }
+
+                    const preference = await response.json();
+                    
+                    if (preference.init_point) {
+                      window.location.href = preference.init_point;
+                    } else {
+                      throw new Error('No se recibió un link de pago válido.');
+                    }
+                    
+                  } catch (err: any) {
+                    setBuyForOtherError(err.message || 'Error al iniciar la compra');
+                  } finally {
+                    setIsPurchasing(false);
+                  }
+                }}
+              >
+                {isPurchasing ? 'Redirigiendo...' : 'Confirmar y Pagar'}
+              </button>
+              {buyForOtherError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg mt-2 text-center">
+                  {buyForOtherError}
+                </div>
+              )}
+              <button
+                className="mt-2 text-sm text-gray-500 hover:text-primary"
+                onClick={() => { setShowConfirmModal(false); setCompraPara('personal'); setDniParaOtro(''); setUsuarioSeleccionado(null); setBuyForOtherError(null); setCantidad(1); }}
+              >Cancelar</button>
+            </div>
+          </div>
+        </Dialog>
+
+        {/* Modal de compra de pack */}
+        <Dialog open={showPackModal} onClose={() => { setShowPackModal(false); setPackSeleccionado(null); setPackError(null); setCompraPackPara('personal'); setDniPack(''); setUsuarioPack(null); setUsuarioPackError(null); }} className="fixed z-50 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
+            <div className="relative bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center z-10">
+              <Dialog.Title className="text-xl font-bold text-primary mb-2">Confirmar compra de pack</Dialog.Title>
+              <div className="mb-4">
+                <div className="text-lg font-semibold mb-1">
+                  {packSeleccionado === '10' && 'Pack Básico'}
+                  {packSeleccionado === '20' && 'Pack Premium'}
+                  {packSeleccionado === '40' && 'Pack Pro'}
+                </div>
+                <div className="text-2xl font-bold text-primary mb-1">${packSeleccionado ? (parseInt(packSeleccionado) * 2000).toLocaleString('es-AR') : ''}</div>
+                <div className="text-sm text-secondary">Recibirás {packSeleccionado} boletos únicos a $2.000 cada uno.</div>
+              </div>
+              {/* Selector para quién es el pack */}
+              <div className="flex justify-center gap-2 mb-4">
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPackPara === 'personal' ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-gray-300'}`}
+                  onClick={() => setCompraPackPara('personal')}
+                >
+                  Para mí
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-lg border font-semibold transition ${compraPackPara === 'otro' ? 'bg-secondary text-white border-secondary' : 'bg-white text-secondary border-gray-300'}`}
+                  onClick={() => setCompraPackPara('otro')}
+                >
+                  Para otra persona
+                </button>
+              </div>
+              {compraPackPara === 'otro' && (
+                <div className="relative mb-2">
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary mb-2"
+                    placeholder="DNI del destinatario"
+                    value={dniPack}
+                    onChange={e => { setDniPack(e.target.value); setUsuarioPack(null); setUsuarioPackError(null); }}
+                    required
+                    minLength={7}
+                    maxLength={10}
+                    pattern="[0-9]+"
+                    autoComplete="off"
+                  />
+                  {buscandoUsuarioPack && (
+                    <div className="mt-1 text-secondary text-xs">Buscando usuario...</div>
+                  )}
+                  {usuarioPack && !usuarioPackError && (
+                    <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-left text-xs">
+                      <div><span className="font-semibold">Nombre:</span> {usuarioPack.nombre} {usuarioPack.apellido}</div>
+                      <div><span className="font-semibold">DNI:</span> {usuarioPack.dni}</div>
+                      <div><span className="font-semibold">Email:</span> {usuarioPack.email}</div>
+                      {usuarioPack.rol && <div><span className="font-semibold">Rol:</span> {usuarioPack.rol}</div>}
+                    </div>
+                  )}
+                  {usuarioPackError && (
+                    <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-left text-xs text-red-700">
+                      {usuarioPackError}
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                className="w-full px-5 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-secondary transition shadow-md mb-2"
+                disabled={isBuyingPack || (compraPackPara === 'otro' && (!dniPack.trim() || !usuarioPack))}
+                onClick={async () => {
+                  setIsBuyingPack(true);
+                  setPackError(null);
+                  try {
+                    const token = localStorage.getItem('access_token');
+                    const body: any = {
+                      payer: { email: user.email },
+                      packType: packSeleccionado,
+                    };
+                    if (compraPackPara === 'otro') {
+                      body.dni = dniPack.trim();
+                    }
+                    const response = await fetch(apiUrls.mercadopago.comprarPack, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`,
                       },
-                      body: JSON.stringify({
-                        payer: { email: user.email },
-                        dni: dniParaOtro.trim(),
-                      }),
+                      body: JSON.stringify(body),
                     });
                     if (!response.ok) {
                       const data = await response.json().catch(() => ({}));
@@ -749,42 +858,27 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                       throw new Error('No se recibió un link de pago válido.');
                     }
                   } catch (err: any) {
-                    setBuyForOtherError(err.message || 'Error al iniciar la compra');
+                    setPackError(err.message || 'Error al iniciar la compra');
                   } finally {
-                    setIsBuyingForOther(false);
+                    setIsBuyingPack(false);
                   }
                 }}
-                className="flex flex-col gap-4"
               >
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="DNI del destinatario"
-                  value={dniParaOtro}
-                  onChange={e => setDniParaOtro(e.target.value)}
-                  required
-                  minLength={7}
-                  maxLength={10}
-                  pattern="[0-9]+"
-                  disabled={isBuyingForOther}
-                />
-                <button
-                  type="submit"
-                  className="w-full px-5 py-2 rounded-lg bg-secondary text-white font-semibold hover:bg-primary transition shadow-md"
-                  disabled={isBuyingForOther || !dniParaOtro.trim()}
-                >
-                  {isBuyingForOther ? 'Redirigiendo...' : 'Comprar boleto'}
-                </button>
-                {buyForOtherError && (
-                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg mt-2 text-center">
-                    {buyForOtherError}
-                  </div>
-                )}
-              </form>
+                {isBuyingPack ? 'Redirigiendo...' : 'Confirmar y Pagar'}
+              </button>
+              {packError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg mt-2 text-center">
+                  {packError}
+                </div>
+              )}
+              <button
+                className="mt-2 text-sm text-gray-500 hover:text-primary"
+                onClick={() => { setShowPackModal(false); setPackSeleccionado(null); setPackError(null); setCompraPackPara('personal'); setDniPack(''); setUsuarioPack(null); setUsuarioPackError(null); }}
+              >Cancelar</button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </Dialog>
+      </div>
     </motion.div>
   );
 };
