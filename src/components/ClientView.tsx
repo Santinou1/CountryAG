@@ -547,8 +547,8 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                   onClick={() => setTipoBoleto('unico')}
                 >
                   <div className="flex flex-col items-start">
-                    <span className="text-base font-bold">Boleto Único</span>
-                    <span className="text-xs text-primary/80 font-semibold">1 viaje</span>
+                    <span className="text-base font-bold">Un viajecito nomás</span>
+                    <span className="text-xs text-primary/80 font-semibold">1 Viaje</span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-lg font-bold">$2.500</span>
@@ -558,9 +558,9 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
 
                 {/* Packs */}
                 {[
-                  {n: '10', label: 'Pack Básico', total: 20000},
-                  {n: '20', label: 'Pack Premium', total: 40000},
-                  {n: '40', label: 'Pack Pro', total: 80000}
+                  {n: '10', label: '10 viajes sin culpa', total: 20000, viajes: '10 Viajes'},
+                  {n: '20', label: '20 razones para no manejar', total: 40000, viajes: '20 Viajes'},
+                  {n: '40', label: 'No bajo nunca del bondi', total: 80000, viajes: '40 Viajes'}
                 ].map(pack => (
                   <button
                     key={pack.n}
@@ -570,7 +570,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                   >
                     <div className="flex flex-col items-start">
                       <span className="text-base font-bold">{pack.label}</span>
-                      <span className="text-xs text-primary/80 font-semibold">{pack.n} viajes</span>
+                      <span className="text-xs text-primary/80 font-semibold">{pack.viajes}</span>
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="text-lg font-bold">${pack.total.toLocaleString('es-AR')}</span>
@@ -583,7 +583,7 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
               {/* Detalles de la compra seleccionada */}
               {tipoBoleto === 'unico' && (
                 <div className="mb-4">
-                  <div className="text-lg font-semibold mb-1">Boleto Único</div>
+                  <div className="text-lg font-semibold mb-1">Un viajecito nomás</div>
                   <div className="text-2xl font-bold text-primary mb-1">${(BOLETO_UNICO_PRECIO * cantidad).toLocaleString('es-AR')}</div>
                   <div className="text-sm text-secondary">Precio por boleto: $2.500</div>
                   
@@ -612,12 +612,16 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
               {tipoBoleto !== 'unico' && (
                 <div className="mb-4">
                   <div className="text-lg font-semibold mb-1">
-                    {tipoBoleto === '10' && 'Pack Básico'}
-                    {tipoBoleto === '20' && 'Pack Premium'}
-                    {tipoBoleto === '40' && 'Pack Pro'}
+                    {tipoBoleto === '10' && '10 viajes sin culpa'}
+                    {tipoBoleto === '20' && '20 razones para no manejar'}
+                    {tipoBoleto === '40' && 'No bajo nunca del bondi'}
                   </div>
                   <div className="text-2xl font-bold text-primary mb-1">${tipoBoleto ? (parseInt(tipoBoleto) * 2000).toLocaleString('es-AR') : ''}</div>
-                  <div className="text-sm text-secondary">Recibirás {tipoBoleto} boletos únicos a $2.000 cada uno.</div>
+                  <div className="text-sm text-secondary">
+                    {tipoBoleto === '10' && '10 Viajes'}
+                    {tipoBoleto === '20' && '20 Viajes'}
+                    {tipoBoleto === '40' && '40 Viajes'}
+                  </div>
                 </div>
               )}
 
@@ -768,12 +772,16 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
               <Dialog.Title className="text-xl font-bold text-primary mb-2">Confirmar compra de pack</Dialog.Title>
               <div className="mb-4">
                 <div className="text-lg font-semibold mb-1">
-                  {packSeleccionado === '10' && 'Pack Básico'}
-                  {packSeleccionado === '20' && 'Pack Premium'}
-                  {packSeleccionado === '40' && 'Pack Pro'}
+                  {packSeleccionado === '10' && '10 viajes sin culpa'}
+                  {packSeleccionado === '20' && '20 razones para no manejar'}
+                  {packSeleccionado === '40' && 'No bajo nunca del bondi'}
                 </div>
                 <div className="text-2xl font-bold text-primary mb-1">${packSeleccionado ? (parseInt(packSeleccionado) * 2000).toLocaleString('es-AR') : ''}</div>
-                <div className="text-sm text-secondary">Recibirás {packSeleccionado} boletos únicos a $2.000 cada uno.</div>
+                <div className="text-sm text-secondary">
+                  {packSeleccionado === '10' && '10 Viajes'}
+                  {packSeleccionado === '20' && '20 Viajes'}
+                  {packSeleccionado === '40' && '40 Viajes'}
+                </div>
               </div>
               {/* Selector para quién es el pack */}
               <div className="flex justify-center gap-2 mb-4">
