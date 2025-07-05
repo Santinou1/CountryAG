@@ -7,4 +7,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  server: {
+    allowedHosts: ['transporteenpunto.com.ar', 'localhost', '127.0.0.1'],
+  },
 });
