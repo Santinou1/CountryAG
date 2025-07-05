@@ -8,6 +8,6 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
-    allowedHosts: ['transporteenpunto.com.ar', 'localhost', '127.0.0.1'],
+    allowedHosts: ['transporteenpunto.com.ar', 'www.transporteenpunto.com.ar', 'localhost', '127.0.0.1'],
   },
 });
