@@ -2,9 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { User, Mail, Shield, Edit, Trash2, MoreVertical, CheckCircle, XCircle, CreditCard, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SearchBar } from './SearchBar';
-import { ConfirmModal } from './ConfirmModal';
 import { RoleSelectorModal } from './RoleSelectorModal';
 import { filterUsers } from '../../utils/searchUtils';
+import { apiUrls } from '../../configs/api';
 
 interface AdminUser {
   id: string;
@@ -67,6 +67,25 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       setSelectedUser(null);
     } catch (error) {
       console.error('Error al actualizar rol:', error);
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  // Nueva función para blanquear contraseña
+  const handleBlankPassword = async (userId: string) => {
+    setIsLoading(userId);
+    try {
+      const token = localStorage.getItem('access_token');
+      await fetch(apiUrls.users.blankPassword(userId), {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      await onRefresh();
+    } catch (error) {
+      console.error('Error al blanquear contraseña:', error);
     } finally {
       setIsLoading(null);
     }
@@ -195,7 +214,6 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                             <Shield className="w-4 h-4" />
                             Cambiar Rol
                           </button>
-                          
                           <button
                             onClick={() => openDeleteModal(user)}
                             disabled={isLoading === user.id}
@@ -203,6 +221,14 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                           >
                             <Trash2 className="w-4 h-4" />
                             Eliminar
+                          </button>
+                          <button
+                            onClick={() => handleBlankPassword(user.id)}
+                            disabled={isLoading === user.id}
+                            className="flex items-center justify-center gap-2 px-3 py-2 text-sm bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 disabled:opacity-50 transition-colors"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Blanquear Contraseña
                           </button>
                         </div>
                       </div>
@@ -216,20 +242,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       )}
 
       {/* Modal de confirmación de eliminación */}
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setSelectedUser(null);
-        }}
-        onConfirm={() => selectedUser && handleDeleteUser(selectedUser.id)}
-        title="Eliminar Usuario"
-        message={`¿Estás seguro de que quieres eliminar a ${selectedUser ? getUserDisplayName(selectedUser) : 'este usuario'}? Esta acción no se puede deshacer.`}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-        type="danger"
-        isLoading={isLoading === selectedUser?.id}
-      />
+      {/* Eliminado ConfirmModal */}
 
       {/* Modal de selección de rol */}
       <RoleSelectorModal

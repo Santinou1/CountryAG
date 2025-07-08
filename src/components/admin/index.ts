@@ -6,5 +6,4 @@ export { MetricasTab } from './MetricasTab';
 export { MetricasGenerales } from './MetricasGenerales';
 export { MetricasPorEstado } from './MetricasPorEstado';
 export { MetricasUso } from './MetricasUso';
-export { ConfirmModal } from './ConfirmModal';
 export { RoleSelectorModal } from './RoleSelectorModal'; 

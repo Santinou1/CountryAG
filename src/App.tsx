@@ -6,6 +6,7 @@ const RegisterForm = lazy(() => import('./components/auth/RegisterForm'));
 const ClientView = lazy(() => import('./components/ClientView'));
 const AdminView = lazy(() => import('./components/AdminView'));
 const DriverView = lazy(() => import('./components/DriverView'));
+const ResetPasswordForm = lazy(() => import('./components/auth/ResetPasswordForm'));
 import { Loader2 } from 'lucide-react';
 import { useApp } from './hooks/useApp';
 
@@ -16,12 +17,13 @@ function AppRoutes() {
   const location = useLocation();
 
   // Si estamos en login o register, solo carga esos componentes, sin hooks globales ni lógica de usuario
-  if (location.pathname === '/login' || location.pathname === '/register') {
+  if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/reset-password') {
     return (
       <Suspense fallback={<div className="flex flex-col items-center justify-center min-h-screen"><Loader2 className={`w-10 h-10 ${PRIMARY_COLOR} animate-spin mb-4`} /><span className={`${PRIMARY_COLOR} font-medium`}>Cargando...</span></div>}>
         <Routes>
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
+          <Route path="/reset-password" element={<ResetPasswordForm />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>

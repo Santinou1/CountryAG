@@ -150,6 +150,11 @@ export const LoginForm = () => {
               ¿No tienes cuenta? Regístrate aquí
             </Link>
           </div>
+          <div className="text-sm text-center mt-2">
+            <Link to="/reset-password" className="font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200">
+              ¿Olvidaste o necesitas restablecer tu contraseña?
+            </Link>
+          </div>
         </form>
       </div>
     </div>

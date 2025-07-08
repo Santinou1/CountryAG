@@ -12,6 +12,7 @@ export const apiUrls = {
     logout: `${baseUrl}/api/auth/logout`,
     me: `${baseUrl}/api/users/me`,
     getByDni: (dni: string) => `${baseUrl}/api/users/by-dni/${dni}`,
+    blankPassword: (id: string) => `${baseUrl}/api/users/${id}/blank-password`,
   },
   boletos: {
     crear: (userId: string) => `${baseUrl}/api/boletos/crear/${userId}`,
@@ -47,5 +48,8 @@ export const apiUrls = {
     topUsuarios: `${baseUrl}/api/metricas/top-usuarios`,
     uso: `${baseUrl}/api/metricas/uso`,
     resumen: `${baseUrl}/api/metricas/resumen`,
+  },
+  auth: {
+    setPassword: `${baseUrl}/api/auth/set-password`,
   },
 }; 
