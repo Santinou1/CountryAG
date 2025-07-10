@@ -327,13 +327,6 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
           >
             Diario
           </button>
-          <button
-            className={`px-4 py-2 rounded-lg border font-semibold bg-primary text-white transition`}
-            onClick={() => setTipoBoleto('unico')}
-            disabled={isPurchasing}
-          >
-            Único
-          </button>
         </div>
 
         {/* Botón para adquirir boleto */}
@@ -363,7 +356,6 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
             </div>
             <div className="flex gap-4 text-sm">
               <span className="flex items-center gap-1 text-green-700 font-semibold"><CheckCircle className="w-4 h-4" />Usados: {boletosUsados.length}</span>
-              <span className="flex items-center gap-1 text-yellow-700 font-semibold"><Clock className="w-4 h-4" />Pendientes: {boletosPendientes.length}</span>
             </div>
             <button
               className="mt-3 flex items-center gap-1 text-primary hover:text-secondary text-sm font-semibold focus:outline-none"
@@ -435,36 +427,8 @@ export const ClientView: React.FC<ClientViewProps> = ({ user: initialUser }) => 
                 )}
               </div>
             )}
-            {/* Pendientes - acordeón */}
-            {boletosPendientes.length > 0 && (
-              <div>
-                <button
-                  className="w-full flex items-center justify-between text-md font-semibold text-primary mt-4 mb-2 focus:outline-none"
-                  onClick={() => setShowPendientes(v => !v)}
-                >
-                  <span>Pendientes</span>
-                  {showPendientes ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                {showPendientes && (
-                  <div className="space-y-2">
-                    {boletosPendientes.map((ticket, index) => (
-                      <motion.div
-                        key={ticket.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="bg-yellow-50 rounded-xl p-3 shadow-sm border border-yellow-100 flex items-center gap-3"
-                      >
-                        <span className="font-medium text-primary">Boleto Único</span>
-                        <span className="ml-auto text-xs text-yellow-700 bg-yellow-200 px-2 py-1 rounded-full">Pendiente</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
             {/* Si no hay boletos */}
-            {boletosDisponibles.length === 0 && boletosUsados.length === 0 && boletosPendientes.length === 0 && (
+            {boletosDisponibles.length === 0 && boletosUsados.length === 0 && (
               <div className="text-center text-gray-500 py-8">No tienes boletos aún</div>
             )}
           </div>
