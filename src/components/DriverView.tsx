@@ -13,7 +13,7 @@ interface DriverViewProps {
 }
 
 export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'history'>('pending');
+  const [activeTab, setActiveTab] = useState<'confirmed'>('confirmed');
   const [searchQuery, setSearchQuery] = useState('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const { boletos, isLoading, error, refreshBoletos, fetchBoletosByTab } = useAdminBoletos();
@@ -23,28 +23,25 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
 
   // Efecto para cargar boletos cuando cambia la pestaña
   useEffect(() => {
-    fetchBoletosByTab(activeTab);
-  }, [activeTab, fetchBoletosByTab]);
+    fetchBoletosByTab();
+  }, [fetchBoletosByTab]);
 
   // Filtrar boletos según la pestaña y la búsqueda
   const filteredBoletos = boletos
     .filter(ticket => {
       // En la pestaña de 'confirmados', solo mostrar boletos válidos para el día de hoy.
-      if (activeTab === 'confirmed') {
-        // Ocultar boletos únicos ya usados
-        if (ticket.tipo === 'unico' && ticket.contador >= 1) {
-          return false;
-        }
-        // La regla principal: si un boleto tiene fecha de expiración, esta tiene prioridad.
-        // Solo mostramos el boleto si la fecha de expiración aún no ha pasado.
-        if (ticket.validoHasta) {
-          return new Date() < new Date(ticket.validoHasta);
-        }
-        // Si el boleto NO tiene fecha de expiración, significa que es nuevo y nunca se ha usado.
-        // En este caso, siempre lo mostramos en la lista de confirmados.
-        return true;
+      // Solo existe 'confirmed', así que no es necesario chequear el tab
+      // Ocultar boletos únicos ya usados
+      if (ticket.tipo === 'unico' && (ticket.contador ?? 0) >= 1) {
+        return false;
       }
-      // Para las otras pestañas ('pending', 'history'), no aplicamos este filtro de fecha.
+      // La regla principal: si un boleto tiene fecha de expiración, esta tiene prioridad.
+      // Solo mostramos el boleto si la fecha de expiración aún no ha pasado.
+      if (ticket.validoHasta) {
+        return new Date() < new Date(ticket.validoHasta);
+      }
+      // Si el boleto NO tiene fecha de expiración, significa que es nuevo y nunca se ha usado.
+      // En este caso, siempre lo mostramos en la lista de confirmados.
       return true;
     })
     .filter(ticket => 
@@ -54,9 +51,9 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
       (ticket.dni && ticket.dni.includes(searchQuery))
     );
 
-  const handleTabChange = (tab: 'pending' | 'confirmed' | 'history') => {
-    setActiveTab(tab);
-    setSearchQuery(''); // Limpiar la búsqueda al cambiar de pestaña
+  const handleTabChange = (tab: string) => {
+    setActiveTab('confirmed');
+    setSearchQuery('');
   };
 
   const handleAprobarBoleto = async (ticketId: string) => {
@@ -173,42 +170,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
   const getActionButtons = (ticket: Ticket) => {
     console.log(`[Depuración] Boleto ID: ${ticket.id}, Tab: ${activeTab}, Status: ${ticket.status}`);
 
-    // Para boletos en la pestaña pendientes, mostrar botones de Confirmar/Rechazar
-    if (activeTab === 'pending' && ticket.status === 'pendiente') {
-      return (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex gap-2 mt-3"
-        >
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleAprobarBoleto(ticket.id)}
-            className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 bg-primary text-white hover:bg-secondary"
-          >
-            <CheckCircle className="w-4 h-4" />
-            Confirmar
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleRechazarBoleto(ticket.id)}
-            className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 bg-red-600 text-white hover:bg-red-700"
-          >
-            <X className="w-4 h-4" />
-            Rechazar
-          </motion.button>
-        </motion.div>
-      );
-    }
-    // Para boletos en la pestaña confirmados, no mostramos nada aquí porque 
-    // el botón se renderiza directamente en getTicketCard
-    if (activeTab === 'confirmed' && ticket.status === 'aprobado') {
-      return null;
-    }
+    // Ya no hay pestaña pendientes, solo confirmados. No se muestran acciones aquí.
     return null;
   };
 
@@ -348,7 +310,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
             {activeTab === 'confirmed' && ticket.tipo === 'unico' && (
               <div className="mt-2 text-xs font-semibold text-red-600">
                 Boleto Único
-                {ticket.contador >= 1 ? ' — Ya fue utilizado (un solo uso)' : ' — Válido para un solo viaje'}
+                {(ticket.contador ?? 0) >= 1 ? ' — Ya fue utilizado (un solo uso)' : ' — Válido para un solo viaje'}
               </div>
             )}
           </div>
@@ -412,7 +374,8 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
           className="bg-white border-b border-gray-200"
         >
           <div className="flex">
-            {['pending', 'confirmed', 'history'].map((tab, index) => (
+            {/* {['pending', 'confirmed', 'history'].map((tab, index) => ( */}
+            {[ 'confirmed' ].map((tab, index) => (
               <motion.button
                 key={tab}
                 initial={{ opacity: 0, y: -10 }}
@@ -420,23 +383,20 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
                 transition={{ delay: 0.3 + index * 0.1 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => handleTabChange(tab as typeof activeTab)}
+                onClick={() => handleTabChange(tab)}
                 className={`flex-1 py-4 px-4 text-center font-medium transition-all duration-300 relative ${
-                  activeTab === tab
-                    ? 'text-primary'
-                    : 'text-gray-500 hover:text-secondary'
+                  'text-primary'
                 }`}
               >
-                {tab === 'pending' && 'Pendientes (' + filteredBoletos.length + ')'}
+                {/* {tab === 'pending' && 'Pendientes (' + filteredBoletos.length + ')'}
                 {tab === 'confirmed' && 'Confirmados (' + filteredBoletos.length + ')'}
-                {tab === 'history' && 'Historial (' + filteredBoletos.length + ')'}
-                {activeTab === tab && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                )}
+                {tab === 'history' && 'Historial (' + filteredBoletos.length + ')'} */}
+                {'Confirmados (' + filteredBoletos.length + ')'}
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
               </motion.button>
             ))}
           </div>
@@ -531,7 +491,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
                 exit={{ opacity: 0 }}
                 className="space-y-4"
               >
-                {activeTab === 'pending' && (
+                {/* {activeTab === 'pending' && (
                   <motion.div>
                     <h2 className="text-lg font-semibold text-primary">
                       Boletos Pendientes
@@ -579,7 +539,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
                       )}
                     </AnimatePresence>
                   </motion.div>
-                )}
+                )} */}
 
                 {activeTab === 'confirmed' && (
                   <motion.div>
@@ -631,7 +591,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
                   </motion.div>
                 )}
 
-                {activeTab === 'history' && (
+                {/* {activeTab === 'history' && (
                   <motion.div>
                     <h2 className="text-lg font-semibold text-primary">
                       Historial de Boletos
@@ -679,7 +639,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ user, onLogout }) => {
                       )}
                     </AnimatePresence>
                   </motion.div>
-                )}
+                )} */}
               </motion.div>
             )}
           </AnimatePresence>

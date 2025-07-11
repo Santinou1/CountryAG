@@ -11,7 +11,7 @@ interface UseAdminBoletosReturn {
   rechazarBoleto: (boletoId: string, userId: string) => Promise<void>;
   consumoManual: (boletoId: string) => Promise<void>;
   refreshBoletos: () => Promise<void>;
-  fetchBoletosByTab: (tab: 'pending' | 'confirmed' | 'history') => Promise<void>;
+  fetchBoletosByTab: () => Promise<void>;
 }
 
 export const useAdminBoletos = (): UseAdminBoletosReturn => {
@@ -63,7 +63,7 @@ export const useAdminBoletos = (): UseAdminBoletosReturn => {
 
       const token = validarAutenticacion();
 
-      const response = await fetch(apiUrls.boletos.getAll, {
+      const response = await fetch(apiUrls.boletos.getConfirmados, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -184,56 +184,9 @@ export const useAdminBoletos = (): UseAdminBoletosReturn => {
     }
   }, [validarAutenticacion, obtenerBoletos]);
 
-  const fetchBoletosByTab = useCallback(async (tab: 'pending' | 'confirmed' | 'history') => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const token = validarAutenticacion();
-
-      // Seleccionamos el endpoint según la pestaña
-      let url: string;
-      switch (tab) {
-        case 'pending':
-          url = apiUrls.boletos.getPendientes;
-          break;
-        case 'confirmed':
-          url = apiUrls.boletos.getConfirmados;
-          break;
-        case 'history':
-          url = apiUrls.boletos.getConsumidos;
-          break;
-        default:
-          url = apiUrls.boletos.getAll;
-      }
-
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        localStorage.removeItem('access_token');
-        throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Error al obtener los boletos' }));
-        throw new Error(errorData.message || 'Error al obtener los boletos');
-      }
-
-      const data: Boleto[] = await response.json();
-      const tickets = data.map(convertirBoletoATicket);
-      setBoletos(tickets);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al cargar los boletos';
-      setError(errorMessage);
-      console.error('Error al obtener boletos:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [validarAutenticacion, convertirBoletoATicket]);
+  const fetchBoletosByTab = useCallback(async () => {
+    await obtenerBoletos();
+  }, [obtenerBoletos]);
 
   useEffect(() => {
     obtenerBoletos();
